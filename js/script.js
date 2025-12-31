@@ -1,5 +1,6 @@
 const { jsPDF } = window.jspdf;
 let previewModal, successModal;
+let currentDoc = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     previewModal = new bootstrap.Modal(document.getElementById('previewModal'));
@@ -28,8 +29,18 @@ function checkAccess() {
         document.getElementById('app-screen').classList.remove('d-none');
         showNotif("Bienvenue, ISMAEL EL GRINGO");
     } else {
-        showNotif("Accès refusé", "error");
+        showNotif("Code incorrect", "error");
     }
+}
+
+// --- FONCTION POUR CHARGER LES IMAGES AUTOMATIQUEMENT ---
+function loadImage(url) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error("Image introuvable : " + url));
+        img.src = url;
+    });
 }
 
 // --- CALCULS ---
@@ -86,28 +97,8 @@ function calculate() {
     document.getElementById('total-words').innerText = numberToFrench(grandTotal) + " FRANCS CFA";
 }
 
-// --- PRÉVISUALISATION ---
-function preVisualise() {
-    const client = document.getElementById('client').value;
-    if(!client) return showNotif("Veuillez indiquer le client", "error");
-    
-    let html = `<div class="p-3"><table class="table table-bordered">
-        <thead class="table-dark"><tr><th>DESIGNATION</th><th>CONDITIONNEMENT</th><th>PRIX / kg</th><th>TOTAL</th></tr></thead>
-        <tbody>`;
-    document.querySelectorAll('#rows tr').forEach(tr => {
-        const d = tr.querySelector('.d-in').value;
-        const c = tr.querySelector('.c-in').value;
-        const p = tr.querySelector('.p-in').value;
-        const t = tr.querySelector('.line-total').innerText;
-        if(d) html += `<tr><td>${d}</td><td>${c}</td><td>${p}</td><td>${t}</td></tr>`;
-    });
-    html += `</tbody></table><h5 class="text-end">TOTAL : ${document.getElementById('grand-total').innerText}</h5></div>`;
-    document.getElementById('preview-body').innerHTML = html;
-    previewModal.show();
-}
-
-// --- GÉNÉRATION PDF ---
-async function downloadPDF() {
+// --- GÉNÉRATION DU PDF (UTILISÉ POUR PRÉVIEW ET EXPORT) ---
+async function generatePDFObject() {
     const doc = new jsPDF();
     const client = document.getElementById('client').value.toUpperCase();
     const fNum = document.getElementById('f-num').value;
@@ -116,51 +107,40 @@ async function downloadPDF() {
     
     doc.setFont("times", "normal");
 
-    // --- 1. FILIGRANE (CENTRAGE ABSOLU) ---
+    // 1. Filigrane
     doc.saveGraphicsState();
-    const gState = new doc.GState({opacity: 0.12});
-    doc.setGState(gState);
-    doc.setTextColor(150, 150, 150);
-    doc.setFontSize(22).setFont("times", "bold");
-    // 105 et 148 sont les coordonnées du centre d'une feuille A4
-    doc.text("ETS FRESHBULK SERVICE LE ROI DES FRUITS & LEGUMES", 105, 148, { 
-        angle: 45, align: 'center', baseline: 'middle'
-    });
+    doc.setGState(new doc.GState({opacity: 0.1}));
+    doc.setTextColor(150).setFontSize(22).setFont("times", "bold");
+    doc.text("ETS FRESHBULK SERVICE LE ROI DES FRUITS & LEGUMES", 105, 148, { angle: 45, align: 'center', baseline: 'middle' });
     doc.restoreGraphicsState();
 
-    // --- 2. EN-TÊTE AVEC TES IMAGES LOCALES ---
-    // Remplace logo1.png et logo2.png par tes vrais noms de fichiers
+    // 2. Logos automatiques depuis assets/
     try {
-        doc.addImage('assets/logo1.png', 'PNG', 12, 8, 35, 30); // Image Gauche
-        doc.addImage('assets/logo2.png', 'PNG', 163, 8, 35, 30); // Image Droite
-    } catch (e) { 
-        console.error("Vérifie que logo1.png et logo2.png sont bien dans le dossier assets"); 
+        const img1 = await loadImage('assets/logo1.png');
+        const img2 = await loadImage('assets/logo2.png');
+        doc.addImage(img1, 'PNG', 12, 10, 35, 30);
+        doc.addImage(img2, 'PNG', 163, 10, 35, 30);
+    } catch (e) {
+        console.warn("Certains logos n'ont pas pu être chargés automatiquement.", e);
     }
 
-    doc.setTextColor(25, 135, 84); // Vert
-    doc.setFontSize(28).setFont("times", "bold");
-    doc.text("ETS FRESHBULK SERVICE", 105, 20, { align: 'center' });
+    // 3. En-tête vert
+    doc.setTextColor(25, 135, 84).setFontSize(28).setFont("times", "bold");
+    doc.text("ETS FRESHBULK SERVICE", 105, 22, { align: 'center' });
+    doc.setTextColor(0).setFontSize(10).setFont("times", "normal");
+    doc.text("COMMERCE GENERAL - LE ROI DES FRUITS & LEGUMES", 105, 30, { align: 'center' });
+    doc.text("NIU : P119718171347Q | BP : DOUALA | Tel : 695 64 50 21", 105, 36, { align: 'center' });
+    doc.setLineWidth(0.5).line(15, 42, 195, 42);
 
-    doc.setTextColor(0);
-    doc.setFontSize(11).setFont("times", "bold");
-    doc.text("COMMERCE GENERAL", 105, 28, { align: 'center' });
-    doc.setFontSize(10).setFont("times", "normal");
-    doc.text("NIU : P119718171347Q", 105, 34, { align: 'center' });
-    doc.text("BP : DOUALA Tel : 695 64 50 21", 105, 40, { align: 'center' });
-    doc.setLineWidth(0.5).line(15, 45, 195, 45);
+    // 4. Titre et Date soulignée
+    doc.setFontSize(18).setFont("times", "bold").text(`Facture N° ${fNum} : ${client}`, 105, 55, { align: 'center' });
+    const dateStr = new Date(dateInput).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const fullDate = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
+    doc.setFontSize(12).text(fullDate, 105, 63, { align: 'center' });
+    const textW = doc.getTextWidth(fullDate);
+    doc.line(105 - (textW/2), 64, 105 + (textW/2), 64);
 
-    // --- 3. TITRE ET DATE SOULIGNÉE ---
-    doc.setFontSize(18).setFont("times", "bold");
-    doc.text(`Facture ${fNum} : ${client}`, 105, 58, { align: 'center' });
-
-    doc.setFontSize(12);
-    const dStr = new Date(dateInput).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-    const fullDate = dStr.charAt(0).toUpperCase() + dStr.slice(1);
-    const tWidth = doc.getTextWidth(fullDate);
-    doc.text(fullDate, 105, 66, { align: 'center' });
-    doc.line(105 - (tWidth/2), 67, 105 + (tWidth/2), 67);
-
-    // --- 4. TABLEAU ---
+    // 5. Tableau fluide
     const rows = [];
     const itemsHistory = [];
     document.querySelectorAll('#rows tr').forEach(tr => {
@@ -175,48 +155,70 @@ async function downloadPDF() {
     });
 
     doc.autoTable({
-        startY: 75,
-        head: [['DESIGNATION', 'CONDITIONNEMENT', 'PRIX / kg', 'PRIX TOTAL (XAF)']],
+        startY: 72,
+        head: [['DESIGNATION', 'CONDITIONNEMENT', 'PRIX / kg', 'TOTAL (XAF)']],
         body: rows,
         theme: 'grid',
-        styles: { font: "times", textColor: [0, 0, 0], lineColor: [0, 0, 0], lineWidth: 0.1, halign: 'center', fillColor: false },
+        styles: { font: "times", textColor: [0, 0, 0], lineColor: [0, 0, 0], lineWidth: 0.1, halign: 'center', fontSize: 11, cellPadding: 4 },
         headStyles: { fillColor: [255, 255, 255], fontStyle: 'bold' },
-        columnStyles: { 0: { halign: 'left', cellWidth: 50 } },
+        columnStyles: { 0: { halign: 'left', cellWidth: 50 }, 3: { fontStyle: 'bold' } },
         foot: [[
-            { content: 'TOTAL', styles: { halign: 'center', fontStyle: 'bold' } },
+            { content: 'TOTAL NET À PAYER', styles: { fontStyle: 'bold', halign: 'center' } },
             { content: '', colSpan: 2 },
-            { content: grandTotal, styles: { halign: 'center', fontStyle: 'bold', fontSize: 13 } }
+            { content: grandTotal, styles: { fontStyle: 'bold', halign: 'center', fontSize: 13 } }
         ]],
-        footStyles: { fillColor: [242, 242, 247], textColor: [0, 0, 0] }, // GRIS DOUX
-        margin: { left: 25, right: 25 }
+        footStyles: { fillColor: [242, 242, 247], textColor: [0, 0, 0] },
+        margin: { left: 20, right: 20 }
     });
 
+    // 6. Bas de page
     let y = doc.lastAutoTable.finalY + 15;
-
-    // --- 5. MONTANT EN LETTRES ---
-    doc.setFontSize(11).setFont("times", "normal");
     const label = "Arrêté la présente facture à la somme de : ";
     const words = document.getElementById('total-words').innerText;
-    doc.text(label, 25, y);
-    doc.setFont("times", "bold").text(words, 25 + doc.getTextWidth(label), y);
-
-    // --- 6. SIGNATURES ---
-    y += 20;
-    doc.setFont("times", "normal");
-    doc.text("LIVRÉ PAR :", 25, y);
+    doc.setFontSize(11).setFont("times", "normal").text(label, 20, y);
+    doc.setFont("times", "bold").text(words, 20 + doc.getTextWidth(label), y);
+    
+    y += 25;
+    doc.setFont("times", "normal").text("LIVRÉ PAR :", 20, y);
     doc.text("RÉCEPTIONNÉ PAR :", 135, y);
-    y += 10;
-    doc.text("Signature :", 25, y);
-    doc.text("Cachet & Signature :", 135, y);
+    doc.text("Signature :", 20, y + 10);
+    doc.text("Cachet & Signature :", 135, y + 10);
 
-    saveHistory({ num: fNum, client, total: grandTotal, date: dateInput, items: itemsHistory, time: new Date().toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) });
-
-    doc.save(`Facture_${fNum}_${client}.pdf`);
-    previewModal.hide();
-    successModal.show();
+    return { doc, itemsHistory };
 }
 
-// --- HISTORIQUE ---
+// ACTION : PRÉVISUALISER
+async function preVisualise() {
+    if(!document.getElementById('client').value) return showNotif("Indiquez le client", "error");
+    const result = await generatePDFObject();
+    currentDoc = result.doc;
+    document.getElementById('pdf-viewer').src = currentDoc.output('bloburl');
+    previewModal.show();
+}
+
+// ACTION : TÉLÉCHARGER
+async function downloadPDF() {
+    if(currentDoc) {
+        const client = document.getElementById('client').value;
+        const fNum = document.getElementById('f-num').value;
+        const result = await generatePDFObject(); // Recalcul pour l'historique
+        
+        saveHistory({ 
+            num: fNum, 
+            client, 
+            total: document.getElementById('grand-total').innerText, 
+            date: document.getElementById('f-date').value, 
+            items: result.itemsHistory, 
+            time: new Date().toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) 
+        });
+
+        currentDoc.save(`Facture_${fNum}_${client}.pdf`);
+        previewModal.hide();
+        successModal.show();
+    }
+}
+
+// --- HISTORIQUE & CONVERSION LETTRES ---
 function saveHistory(inv) {
     let history = JSON.parse(localStorage.getItem('fb_pro_v3_history')) || [];
     history = history.filter(h => h.num !== inv.num);
@@ -247,7 +249,7 @@ function loadInvoice(inv) {
     if(inv.items) inv.items.forEach(it => addRow(it));
     else addRow();
     calculate();
-    showNotif("Facture chargée");
+    showNotif("Facture rechargée");
 }
 
 function resetInvoice() {

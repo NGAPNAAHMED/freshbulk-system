@@ -1,0 +1,52 @@
+:root { --emerald: #198754; --gold: #ffc107; --error: #dc3545; }
+body { font-family: 'Poppins', sans-serif; background: #000; margin: 0; }
+.no-scroll { overflow: hidden; height: 100vh; }
+.text-emerald { color: var(--emerald) !important; }
+.fw-900 { font-weight: 900; }
+
+/* CONNEXION */
+.login-box { background: #fff; border-radius: 30px; width: 400px; padding: 40px; text-align: center; }
+.login-logo { max-width: 120px; border-radius: 15px; }
+.login-input { border-radius: 15px; padding: 12px; border: 2px solid #eee; text-align: center; font-weight: bold; }
+
+.btn-god { background: var(--emerald); color: white; border: none; border-radius: 15px; padding: 15px; font-weight: 800; width: 100%; transition: 0.3s; }
+.btn-god:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(25, 135, 84, 0.4); }
+
+/* APP UI */
+.bg-emerald-glass { background: var(--emerald); border-bottom: 4px solid var(--gold); }
+.glass-panel { background: white; border-radius: 20px; border: 1px solid #ddd; }
+.pro-input-soft { background: #f8f9fa !important; border: 1px solid #ddd; border-radius: 10px; }
+.label-pro { font-size: 11px; font-weight: 800; color: #777; margin-bottom: 5px; }
+.uppercase { text-transform: uppercase; }
+
+.btn-add-dashed { background: #f0fdf4; color: var(--emerald); border: 2px dashed var(--emerald); border-radius: 12px; padding: 10px; font-weight: 700; transition: 0.2s; }
+.btn-add-dashed:hover { background: var(--emerald); color: white; }
+
+.banner-total { background: #fdfdfd; border-radius: 15px; border-left: 10px solid var(--emerald); }
+
+/* HISTORIQUE */
+.history-scroll { max-height: 65vh; overflow-y: auto; padding: 5px; }
+.history-item { cursor: pointer; transition: 0.2s; }
+.history-item:hover { transform: scale(1.02); background: #f9fffb !important; }
+
+/* NOTIFICATIONS PUSH */
+#notif-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
+.notif-push { 
+    padding: 15px 25px; border-radius: 15px; color: white; margin-bottom: 10px; 
+    font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,0.2); 
+    transition: all 0.5s; animation: slideIn 0.4s ease-out;
+}
+.notif-success { background: var(--emerald); }
+.notif-error { background: var(--error); }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+/* MODAL SUCCÈS */
+.success-icon { animation: bounce 1s infinite alternate; }
+@keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-10px); } }
+
+/* SLIDER */
+.bg-slider { position: fixed; width: 100%; height: 100%; z-index: -2; }
+.bg-slide { position: absolute; width: 100%; height: 100%; background-size: cover; opacity: 0; animation: fade 10s infinite; }
+.bg-slide:nth-child(2) { animation-delay: 5s; }
+@keyframes fade { 0%, 100% { opacity: 0; } 20%, 80% { opacity: 1; } }
+.bg-overlay { position: fixed; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: -1; }

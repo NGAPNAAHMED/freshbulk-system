@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FRESHBULK PRESTIGE V3</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="no-scroll">
+
+    <div id="notif-container"></div>
+
+    <div class="bg-slider">
+        <div class="bg-slide" style="background-image: url('https://images.unsplash.com/photo-1610832958506-aa56368176cf?q=80&w=1920')"></div>
+        <div class="bg-slide" style="background-image: url('https://images.unsplash.com/photo-1512149177596-f817c7ef5d4c?q=80&w=1920')"></div>
+    </div>
+    <div class="bg-overlay"></div>
+
+    <!-- CONNEXION -->
+    <section id="login-screen" class="d-flex align-items-center justify-content-center vh-100">
+        <div class="login-box shadow-lg">
+            <img src="assets/logo.png" alt="Logo" class="login-logo mb-3" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1261/1261163.png'">
+            <h1 class="fw-900 text-emerald mb-0">FRESHBULK</h1>
+            <p class="text-dark fw-bold ls-3 mb-4">PREMIUM SYSTEM</p>
+            <div class="text-start mb-4">
+                <label class="label-pro text-dark">CODE D'ACCÈS PRO</label>
+                <input type="password" id="pass" class="form-control login-input" placeholder="••••••••">
+            </div>
+            <button onclick="checkAccess()" id="login-btn" class="btn-god">ACCÉDER AU SYSTÈME</button>
+        </div>
+    </section>
+
+    <!-- APP PRINCIPALE -->
+    <main id="app-screen" class="d-none h-100">
+        <nav class="navbar navbar-dark bg-emerald-glass py-2 px-5 shadow">
+            <span class="navbar-brand fw-800 fs-3 text-white">FRESHBULK <span class="text-dark">SERVICE</span></span>
+            <button onclick="location.reload()" class="btn btn-dark btn-sm rounded-pill px-3">DÉCONNEXION</button>
+        </nav>
+
+        <div class="container-fluid p-4">
+            <div class="row g-4">
+                <div class="col-lg-9">
+                    <div class="glass-panel p-4 h-100 shadow-lg">
+                        <div class="row mb-3">
+                            <div class="col-md-3">
+                                <label class="label-pro">N° FACTURE</label>
+                                <input type="text" id="f-num" class="form-control pro-input-soft fw-bold" value="018">
+                                <input type="date" id="f-date" class="form-control pro-input-soft mt-2">
+                            </div>
+                            <div class="col-md-9">
+                                <label class="label-pro">NOM DU CLIENT</label>
+                                <input type="text" id="client" class="form-control pro-input-soft fw-bold uppercase" placeholder="DESTINATAIRE">
+                            </div>
+                        </div>
+
+                        <div class="table-container mb-3 shadow-sm border rounded">
+                            <table class="table align-middle mb-0">
+                                <thead class="table-emerald text-white">
+                                    <tr>
+                                        <th style="width: 35%">DÉSIGNATION</th>
+                                        <th style="width: 25%">CONDITIONNEMENT</th>
+                                        <th style="width: 20%">PRIX / CONDITION.</th>
+                                        <th class="text-end" style="width: 20%">TOTAL (XAF)</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="rows" class="bg-white"></tbody>
+                            </table>
+                        </div>
+                        
+                        <button onclick="addRow()" class="btn-add-dashed w-100 mb-3">
+                            <i class="bi bi-plus-lg me-2"></i> AJOUTER UN PRODUIT
+                        </button>
+
+                        <div class="banner-total shadow-sm d-flex justify-content-between align-items-center">
+                            <div class="px-3">
+                                <span class="text-muted small fw-bold">ARRÊTÉ À LA SOMME DE :</span>
+                                <div id="total-words" class="fw-bold text-emerald">...</div>
+                            </div>
+                            <div class="text-end px-3">
+                                <span class="text-muted small fw-bold">TOTAL NET À PAYER</span>
+                                <div id="grand-total" class="fw-900 fs-2 text-dark">0 FCFA</div>
+                            </div>
+                        </div>
+
+                        <button onclick="preVisualise()" id="main-gen-btn" class="btn-god mt-3 py-3 shadow">PRÉVISUALISER LA FACTURE</button>
+                    </div>
+                </div>
+
+                <div class="col-lg-3">
+                    <div class="glass-panel p-3 h-100 shadow">
+                        <h6 class="fw-800 text-emerald border-bottom pb-2">HISTORIQUE DES VENTES</h6>
+                        <div id="history-box" class="history-scroll mt-2"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- MODAL PREVIEW -->
+    <div class="modal fade" id="previewModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 rounded-4 overflow-hidden shadow-2xl">
+                <div class="modal-header bg-emerald text-white border-0">
+                    <h5 class="modal-title fw-800">PRÉVISUALISATION</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body bg-light" id="preview-body"></div>
+                <div class="modal-footer bg-light border-0">
+                    <button class="btn btn-secondary px-4 rounded-pill" data-bs-dismiss="modal">RETOUR</button>
+                    <button onclick="downloadPDF()" id="final-download-btn" class="btn btn-success px-5 fw-bold rounded-pill">TÉLÉCHARGER LE PDF</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL SUCCÈS -->
+    <div class="modal fade" id="successModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 rounded-4 text-center p-4">
+                <div class="success-icon mb-3">
+                    <i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i>
+                </div>
+                <h3 class="fw-900 text-dark">PDF TÉLÉCHARGÉ !</h3>
+                <p class="text-muted">La facture a été enregistrée avec succès.</p>
+                <div class="d-grid gap-2">
+                    <button onclick="resetInvoice()" class="btn btn-success btn-lg rounded-pill fw-bold">AUTRE FACTURE ?</button>
+                    <button class="btn btn-link text-muted" data-bs-dismiss="modal" onclick="resetInvoice()">FERMER</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <script src="js/script.js"></script>
+</body>
+</html>

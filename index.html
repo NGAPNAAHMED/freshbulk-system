@@ -13,18 +13,16 @@
 
     <div id="notif-container"></div>
 
-    <div class="bg-slider">
-        <div class="bg-slide" style="background-image: url('https://images.unsplash.com/photo-1610832958506-aa56368176cf?q=80&w=1920')"></div>
-        <div class="bg-slide" style="background-image: url('https://images.unsplash.com/photo-1512149177596-f817c7ef5d4c?q=80&w=1920')"></div>
-    </div>
+    <!-- ARRIÈRE-PLAN FIXE (IMAGE 1 UNIQUEMENT) -->
+    <div class="bg-fixed"></div>
     <div class="bg-overlay"></div>
 
-    <!-- CONNEXION -->
-    <section id="login-screen" class="d-flex align-items-center justify-content-center vh-100">
-        <div class="login-box shadow-lg">
+    <!-- CONNEXION RESPONSIVE -->
+    <section id="login-screen" class="d-flex align-items-center justify-content-center vh-100 p-3">
+        <div class="login-box shadow-lg w-100" style="max-width: 400px;">
             <img src="assets/logo.png" alt="Logo" class="login-logo mb-3" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1261/1261163.png'">
-            <h1 class="fw-900 text-emerald mb-0">FRESHBULK</h1>
-            <p class="text-dark fw-bold ls-3 mb-4">PREMIUM SYSTEM</p>
+            <h1 class="fw-900 text-emerald mb-0 fs-2">FRESHBULK</h1>
+            <p class="text-dark fw-bold ls-3 mb-4 small">PREMIUM SYSTEM</p>
             <div class="text-start mb-4">
                 <label class="label-pro text-dark">CODE D'ACCÈS PRO</label>
                 <input type="password" id="pass" class="form-control login-input" placeholder="••••••••">
@@ -33,56 +31,60 @@
         </div>
     </section>
 
-    <!-- APP PRINCIPALE -->
-    <main id="app-screen" class="d-none h-100">
-        <nav class="navbar navbar-dark bg-emerald-glass py-2 px-5 shadow">
-            <span class="navbar-brand fw-800 fs-3 text-white">FRESHBULK <span class="text-dark">SERVICE</span></span>
-            <button onclick="location.reload()" class="btn btn-dark btn-sm rounded-pill px-3">DÉCONNEXION</button>
+    <!-- APP PRINCIPALE RESPONSIVE -->
+    <main id="app-screen" class="d-none h-100 overflow-auto">
+        <nav class="navbar navbar-dark bg-emerald-glass py-2 px-3 px-md-5 shadow sticky-top">
+            <span class="navbar-brand fw-800 fs-4 fs-md-3 text-white">FRESHBULK <span class="text-dark">SERVICE</span></span>
+            <button onclick="location.reload()" class="btn btn-dark btn-sm rounded-pill px-3">QUITTER</button>
         </nav>
 
-        <div class="container-fluid p-4">
-            <div class="row g-4">
-                <div class="col-lg-9">
-                    <div class="glass-panel p-4 h-100 shadow-lg">
-                        <div class="row mb-3">
-                            <div class="col-md-3">
+        <div class="container-fluid p-2 p-md-4">
+            <div class="row g-3 g-md-4">
+                <!-- PANNEAU SAISIE -->
+                <div class="col-12 col-lg-9">
+                    <div class="glass-panel p-3 p-md-4 h-100 shadow-lg">
+                        <div class="row g-2 mb-3">
+                            <div class="col-6 col-md-3">
                                 <label class="label-pro">N° FACTURE</label>
                                 <input type="text" id="f-num" class="form-control pro-input-soft fw-bold" value="018">
-                                <input type="date" id="f-date" class="form-control pro-input-soft mt-2">
                             </div>
-                            <div class="col-md-9">
+                            <div class="col-6 col-md-3">
+                                <label class="label-pro">DATE</label>
+                                <input type="date" id="f-date" class="form-control pro-input-soft">
+                            </div>
+                            <div class="col-12 col-md-6">
                                 <label class="label-pro">NOM DU CLIENT</label>
                                 <input type="text" id="client" class="form-control pro-input-soft fw-bold uppercase" placeholder="DESTINATAIRE">
                             </div>
                         </div>
 
-                        <div class="table-container mb-3 shadow-sm border rounded">
-                            <table class="table align-middle mb-0">
+                        <div class="table-responsive shadow-sm border rounded mb-3">
+                            <table class="table align-middle mb-0" style="min-width: 600px;">
                                 <thead class="table-emerald text-white">
                                     <tr>
                                         <th style="width: 35%">DÉSIGNATION</th>
                                         <th style="width: 25%">CONDITIONNEMENT</th>
                                         <th style="width: 20%">PRIX / CONDITION.</th>
                                         <th class="text-end" style="width: 20%">TOTAL (XAF)</th>
-                                        <th></th>
+                                        <th style="width: 40px"></th>
                                     </tr>
                                 </thead>
                                 <tbody id="rows" class="bg-white"></tbody>
                             </table>
                         </div>
                         
-                        <button onclick="addRow()" class="btn-add-dashed w-100 mb-3">
+                        <button onclick="addRow()" class="btn-add-dashed w-100 mb-3 py-2">
                             <i class="bi bi-plus-lg me-2"></i> AJOUTER UN PRODUIT
                         </button>
 
-                        <div class="banner-total shadow-sm d-flex justify-content-between align-items-center">
-                            <div class="px-3">
+                        <div class="banner-total shadow-sm flex-column flex-md-row d-flex justify-content-between align-items-md-center p-3">
+                            <div class="mb-2 mb-md-0">
                                 <span class="text-muted small fw-bold">ARRÊTÉ À LA SOMME DE :</span>
-                                <div id="total-words" class="fw-bold text-emerald">...</div>
+                                <div id="total-words" class="fw-bold text-emerald small text-uppercase">...</div>
                             </div>
-                            <div class="text-end px-3">
+                            <div class="text-md-end">
                                 <span class="text-muted small fw-bold">TOTAL NET À PAYER</span>
-                                <div id="grand-total" class="fw-900 fs-2 text-dark">0 FCFA</div>
+                                <div id="grand-total" class="fw-900 fs-3 fs-md-2 text-dark">0 FCFA</div>
                             </div>
                         </div>
 
@@ -90,7 +92,8 @@
                     </div>
                 </div>
 
-                <div class="col-lg-3">
+                <!-- HISTORIQUE (Passe en dessous sur Mobile) -->
+                <div class="col-12 col-lg-3">
                     <div class="glass-panel p-3 h-100 shadow">
                         <h6 class="fw-800 text-emerald border-bottom pb-2">HISTORIQUE DES VENTES</h6>
                         <div id="history-box" class="history-scroll mt-2"></div>
@@ -102,13 +105,13 @@
 
     <!-- MODAL PREVIEW -->
     <div class="modal fade" id="previewModal" tabindex="-1">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-dialog modal-lg modal-dialog-centered p-2">
             <div class="modal-content border-0 rounded-4 overflow-hidden shadow-2xl">
                 <div class="modal-header bg-emerald text-white border-0">
                     <h5 class="modal-title fw-800">PRÉVISUALISATION</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body bg-light" id="preview-body"></div>
+                <div class="modal-body bg-light overflow-auto" id="preview-body" style="max-height: 70vh;"></div>
                 <div class="modal-footer bg-light border-0">
                     <button class="btn btn-secondary px-4 rounded-pill" data-bs-dismiss="modal">RETOUR</button>
                     <button onclick="downloadPDF()" id="final-download-btn" class="btn btn-success px-5 fw-bold rounded-pill">TÉLÉCHARGER LE PDF</button>
@@ -119,13 +122,13 @@
 
     <!-- MODAL SUCCÈS -->
     <div class="modal fade" id="successModal" tabindex="-1" data-bs-backdrop="static">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog modal-dialog-centered p-3">
             <div class="modal-content border-0 rounded-4 text-center p-4">
                 <div class="success-icon mb-3">
-                    <i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i>
+                    <i class="bi bi-check-circle-fill text-success" style="font-size: 3rem;"></i>
                 </div>
                 <h3 class="fw-900 text-dark">PDF TÉLÉCHARGÉ !</h3>
-                <p class="text-muted">La facture a été enregistrée avec succès.</p>
+                <p class="text-muted small">La facture a été enregistrée avec succès.</p>
                 <div class="d-grid gap-2">
                     <button onclick="resetInvoice()" class="btn btn-success btn-lg rounded-pill fw-bold">AUTRE FACTURE ?</button>
                     <button class="btn btn-link text-muted" data-bs-dismiss="modal" onclick="resetInvoice()">FERMER</button>

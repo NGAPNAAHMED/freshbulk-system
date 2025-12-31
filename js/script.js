@@ -9,12 +9,10 @@ document.addEventListener('DOMContentLoaded', () => {
     addRow();
 });
 
-// Formatage des nombres avec espace (milliers)
 function formatNumber(num) {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 }
 
-// Nettoyage pour calcul
 function cleanNum(str) {
     return parseFloat(str.replace(/\s/g, '').replace(',', '.')) || 0;
 }
@@ -31,7 +29,7 @@ function showNotif(msg, type = 'success') {
 function addRow() {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-        <td><input type="text" class="form-control d-in" placeholder="Désignation"></td>
+        <td><input type="text" class="form-control d-in" placeholder="Produit"></td>
         <td><input type="text" class="form-control c-in" placeholder="Ex: 10 kg" oninput="calculate()"></td>
         <td><input type="text" class="form-control p-in" placeholder="0" oninput="formatInput(this)"></td>
         <td class="text-end fw-bold line-total">0</td>
@@ -64,31 +62,32 @@ function calculate() {
 }
 
 function checkAccess() {
-    const pass = document.getElementById('pass').value;
-    if (pass === "012345") {
+    if (document.getElementById('pass').value === "012345") {
         document.getElementById('login-screen').classList.add('d-none');
         document.getElementById('app-screen').classList.remove('d-none');
-        showNotif("Accès autorisé");
+        showNotif("Système déverrouillé");
     } else {
-        showNotif("Code incorrect", "error");
+        showNotif("Accès refusé", "error");
     }
 }
 
+// PRÉVISUALISATION DÉTAILLÉE
 function preVisualise() {
     const client = document.getElementById('client').value;
     if(!client) return showNotif("Veuillez indiquer le client", "error");
     
-    let html = `<div class="p-2"><h6><strong>DESTINATAIRE :</strong> ${client.toUpperCase()}</h6><hr>
-    <table class="table table-sm table-bordered">
-        <thead class="table-dark">
-            <tr>
-                <th>Désignation</th>
-                <th>Conditionnement</th>
-                <th>Prix / Condition.</th>
-                <th class="text-end">Total</th>
-            </tr>
-        </thead>
-        <tbody>`;
+    let html = `<div class="p-2 small"><h6><strong>DESTINATAIRE :</strong> ${client.toUpperCase()}</h6><hr>
+    <div class="table-responsive">
+        <table class="table table-sm table-bordered">
+            <thead class="table-dark">
+                <tr>
+                    <th>Désignation</th>
+                    <th>Cond.</th>
+                    <th>Prix / Cond.</th>
+                    <th class="text-end">Total</th>
+                </tr>
+            </thead>
+            <tbody>`;
     
     document.querySelectorAll('#rows tr').forEach(tr => {
         const d = tr.querySelector('.d-in').value;
@@ -98,7 +97,7 @@ function preVisualise() {
         if(d) html += `<tr><td>${d}</td><td>${c}</td><td>${p}</td><td class="text-end fw-bold">${t}</td></tr>`;
     });
     
-    html += `</tbody></table><h4 class="text-end text-success fw-bold">NET À PAYER : ${document.getElementById('grand-total').innerText}</h4></div>`;
+    html += `</tbody></table></div><h4 class="text-end text-success fw-bold">NET À PAYER : ${document.getElementById('grand-total').innerText}</h4></div>`;
     document.getElementById('preview-body').innerHTML = html;
     previewModal.show();
 }
@@ -111,13 +110,12 @@ async function downloadPDF() {
     const dateF = new Date(dateInput).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     const grandTotal = document.getElementById('grand-total').innerText;
 
-    // Filigrane discret
+    // FILIGRANE
     doc.setTextColor(245);
-    doc.setFontSize(20);
-    doc.setFont("helvetica", "bold");
+    doc.setFontSize(20).setFont("helvetica", "bold");
     doc.text("ETS FRESHBULK SERVICE LE ROI DES FRUITS & LEGUMES", 105, 150, { angle: 45, align: 'center' });
 
-    // En-tête
+    // EN-TÊTE
     doc.setTextColor(25, 135, 84).setFontSize(26).setFont("helvetica", "bold");
     doc.text("ETS FRESHBULK SERVICE", 105, 20, { align: 'center' });
     doc.setTextColor(0).setFontSize(10).text("COMMERCE GENERAL", 105, 28, { align: 'center' });
@@ -153,13 +151,11 @@ async function downloadPDF() {
     });
 
     const y = doc.lastAutoTable.finalY + 15;
-    doc.setFontSize(10).setFont("helvetica", "bold");
-    doc.text(`Arrêté la présente facture à la somme de : ${document.getElementById('total-words').innerText}`, 10, y);
+    doc.setFontSize(10).setFont("helvetica", "bold").text(`Arrêté la présente facture à la somme de : ${document.getElementById('total-words').innerText}`, 10, y);
     
-    // Signatures demandées
+    // SIGNATURES
     doc.text("LIVRÉ PAR :", 30, y + 20);
     doc.setFont("helvetica", "normal").text("Signature & Cachet :", 30, y + 28);
-    
     doc.setFont("helvetica", "bold").text("RÉCEPTIONNÉ PAR :", 140, y + 20);
     doc.setFont("helvetica", "normal").text("Signature :", 140, y + 28);
 
@@ -171,22 +167,22 @@ async function downloadPDF() {
 }
 
 function saveHistory(inv) {
-    let history = JSON.parse(localStorage.getItem('fb_pro_history_v3')) || [];
+    let history = JSON.parse(localStorage.getItem('fb_pro_v3_history')) || [];
     history = history.filter(h => h.num !== inv.num);
     history.unshift(inv);
-    localStorage.setItem('fb_pro_history_v3', JSON.stringify(history));
+    localStorage.setItem('fb_pro_v3_history', JSON.stringify(history));
     loadHistory();
 }
 
 function loadHistory() {
     const box = document.getElementById('history-box');
-    const history = JSON.parse(localStorage.getItem('fb_pro_history_v3')) || [];
+    const history = JSON.parse(localStorage.getItem('fb_pro_v3_history')) || [];
     box.innerHTML = history.length ? '' : '<p class="text-muted small text-center">Aucun historique.</p>';
     history.forEach(h => {
         const d = document.createElement('div');
         d.className = "history-item shadow-sm p-2 mb-2 bg-white rounded border-start border-success border-4";
         d.onclick = () => loadInvoice(h);
-        d.innerHTML = `<strong>N° ${h.num}</strong> - ${h.client}<br><span class="text-success fw-bold">${h.total}</span>`;
+        d.innerHTML = `<strong>N° ${h.num}</strong> - ${h.client}<br><span class="text-success fw-bold small">${h.total}</span>`;
         box.appendChild(d);
     });
 }
@@ -213,21 +209,15 @@ function loadInvoice(inv) {
 }
 
 function resetInvoice() {
-    // Reset Client et Date
     document.getElementById('client').value = "";
     document.getElementById('f-date').valueAsDate = new Date();
-    
-    // Incrémenter Numéro
+    document.getElementById('rows').innerHTML = "";
     const current = parseInt(document.getElementById('f-num').value) || 0;
     document.getElementById('f-num').value = (current + 1).toString().padStart(3, '0');
-    
-    // Vider les lignes et ajouter une vide
-    document.getElementById('rows').innerHTML = "";
     addRow();
     calculate();
-    
     successModal.hide();
-    showNotif("Formulaire prêt pour une nouvelle facture");
+    showNotif("Nouveau formulaire prêt");
 }
 
 function numberToFrench(n) {

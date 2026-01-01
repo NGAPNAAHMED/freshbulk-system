@@ -22,7 +22,7 @@ body { font-family: 'Poppins', sans-serif; background: #000; margin: 0; }
 .pro-input-soft { background: #f8f9fa !important; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem; }
 .label-pro { font-size: 10px; font-weight: 800; color: #555; margin-bottom: 2px; text-transform: uppercase; }
 
-/* TABLEAU */
+/* OPTIMISATION TABLEAU */
 .custom-scroll-container { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
 #main-table { min-width: 750px !important; table-layout: fixed; }
 .col-desig { width: 35%; }
@@ -36,11 +36,12 @@ body { font-family: 'Poppins', sans-serif; background: #000; margin: 0; }
 .btn-add-dashed { background: #f0fdf4; color: var(--emerald); border: 2px dashed var(--emerald); border-radius: 12px; font-weight: 700; margin-top: 10px; }
 .banner-total { background: #fdfdfd; border-left: 8px solid var(--emerald); box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
 
-/* NOTIFICATIONS & HISTORIQUE */
-.notif-push { position: fixed; top: 20px; right: 20px; padding: 15px 25px; border-radius: 12px; color: white; background: var(--emerald); z-index: 10000; box-shadow: 0 10px 20px rgba(0,0,0,0.2); transition: 0.3s; }
+/* HISTORIQUE */
 .history-scroll { max-height: 60vh; overflow-y: auto; }
 .history-item { cursor: pointer; border-bottom: 1px solid #eee; padding: 12px; font-size: 0.9rem; transition: 0.2s; }
 .history-item:hover { background: #f8f9fa; transform: translateX(5px); }
+
+.notif-push { position: fixed; top: 20px; right: 20px; padding: 15px 25px; border-radius: 12px; color: white; background: var(--emerald); z-index: 10000; box-shadow: 0 10px 20px rgba(0,0,0,0.2); transition: 0.3s; }
 
 @media (max-width: 768px) {
     .banner-total { flex-direction: column; text-align: center; }

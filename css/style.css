@@ -7,10 +7,7 @@
 body { font-family: 'Poppins', sans-serif; background: #000; margin: 0; }
 .no-scroll { overflow: hidden; height: 100vh; }
 
-.bg-fixed { 
-    position: fixed; width: 100%; height: 100%; z-index: -2; 
-    background: url('https://images.unsplash.com/photo-1610832958506-aa56368176cf?q=80&w=1920') center/cover;
-}
+.bg-fixed { position: fixed; width: 100%; height: 100%; z-index: -2; background: url('https://images.unsplash.com/photo-1610832958506-aa56368176cf?q=80&w=1920') center/cover; }
 .bg-overlay { position: fixed; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: -1; backdrop-filter: blur(5px); }
 
 /* UI */
@@ -22,33 +19,52 @@ body { font-family: 'Poppins', sans-serif; background: #000; margin: 0; }
 
 .glass-panel { background: white; border-radius: 20px; border: 1px solid #ddd; }
 .bg-emerald-glass { background: var(--emerald); border-bottom: 3px solid var(--gold); }
-.pro-input-soft { background: #f8f9fa !important; border: 1px solid #ddd; border-radius: 8px; font-size: 0.9rem; }
-.label-pro { font-size: 10px; font-weight: 800; color: #555; margin-bottom: 2px; }
+.pro-input-soft { background: #f8f9fa !important; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem; }
+.label-pro { font-size: 10px; font-weight: 800; color: #555; margin-bottom: 2px; text-transform: uppercase; }
 
-/* TABLEAU RESPONSIVE */
-.table th { font-size: 11px; letter-spacing: 0.5px; padding: 10px 5px; }
-
-/* Redimensionnement Mobile/Tablette */
-@media (max-width: 991px) {
-    .col-desig { width: 35% !important; }
-    .col-cond { width: 60px !important; } /* Conditionnement réduit */
-    .col-prix { width: 30% !important; } /* Prix allongé */
-    
-    .c-in { width: 55px !important; padding: 5px !important; text-align: center; }
-    .p-in { font-weight: bold; color: var(--emerald); }
-    
-    .banner-total { flex-direction: column; text-align: center !important; }
-    .banner-total .text-end { text-align: center !important; margin-top: 10px; }
+/* OPTIMISATION TABLEAU MOBILE */
+.custom-scroll-container {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
 }
 
-.d-in, .c-in, .p-in { border: 1px solid #eee; font-size: 0.9rem; padding: 6px; border-radius: 6px !important; }
-.btn-add-dashed { background: #f0fdf4; color: var(--emerald); border: 2px dashed var(--emerald); border-radius: 10px; font-weight: 700; font-size: 0.85rem; }
+#main-table {
+    min-width: 750px !important; /* Force le scroll pour que rien ne soit écrasé */
+    table-layout: fixed;
+}
+
+/* Largeurs fixes pour un rendu PRO */
+.col-desig { width: 35%; }
+.col-cond { width: 100px; } /* Conditionnement court */
+.col-prix { width: 180px; } /* PRIX LARGE POUR VISIBILITÉ */
+.col-total { width: 150px; }
+
+/* Style des inputs dans le tableau */
+.d-in, .c-in, .p-in { 
+    border: 1px solid #ddd; 
+    padding: 8px; 
+    border-radius: 6px !important; 
+    width: 100%;
+}
+.p-in { 
+    font-weight: 800; 
+    color: var(--emerald); 
+    font-size: 1.1rem !important; /* Gros chiffres pour le prix */
+}
+
+.btn-add-dashed { background: #f0fdf4; color: var(--emerald); border: 2px dashed var(--emerald); border-radius: 12px; font-weight: 700; margin-top: 10px; }
+
+.banner-total { background: #fdfdfd; border-left: 8px solid var(--emerald); box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
 
 /* Animation loading */
 .spinner-border-sm { width: 1.2rem; height: 1.2rem; margin-right: 10px; }
-.notif-push { position: fixed; top: 20px; right: 20px; padding: 15px 25px; border-radius: 12px; color: white; background: var(--emerald); z-index: 10000; animation: slideIn 0.3s ease-out; }
-@keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+.notif-push { position: fixed; top: 20px; right: 20px; padding: 15px 25px; border-radius: 12px; color: white; background: var(--emerald); z-index: 10000; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
 
 .history-scroll { max-height: 60vh; overflow-y: auto; }
-.history-item { cursor: pointer; transition: 0.2s; border-bottom: 1px solid #eee; padding: 10px; }
+.history-item { cursor: pointer; border-bottom: 1px solid #eee; padding: 12px; font-size: 0.9rem; }
 .history-item:hover { background: #f8f9fa; }
+
+@media (max-width: 768px) {
+    .banner-total { flex-direction: column; text-align: center; }
+    .banner-total .text-end { margin-top: 15px; width: 100%; text-align: center !important; }
+}

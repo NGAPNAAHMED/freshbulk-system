@@ -15,7 +15,7 @@
     <div class="bg-fixed"></div>
     <div class="bg-overlay"></div>
 
-    <!-- CONNEXION -->
+    <!-- CONNEXION (RETROUVÉ À L'IDENTIQUE) -->
     <section id="login-screen" class="d-flex align-items-center justify-content-center vh-100 p-3">
         <div class="login-box shadow-lg w-100" style="max-width: 400px;">
             <img src="assets/logo.png" alt="Logo" class="login-logo mb-3" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1261/1261163.png'">
@@ -45,6 +45,10 @@
         <nav class="navbar navbar-dark bg-emerald-glass py-2 px-3 px-md-5 shadow sticky-top">
             <span class="navbar-brand fw-800 fs-4 text-white">FRESHBULK <span class="text-dark">SERVICE</span></span>
             <div class="d-flex align-items-center">
+                <div class="text-end me-3 d-none d-md-block">
+                    <div class="text-white-50 small fw-bold" style="font-size: 10px;">SYSTÈME ACTIF</div>
+                    <div class="text-white fw-800">ISMAEL EL GRINGO</div>
+                </div>
                 <button onclick="location.reload()" class="btn btn-dark btn-sm rounded-pill px-3">QUITTER</button>
             </div>
         </nav>
@@ -53,9 +57,9 @@
             <div class="row g-4">
                 <div class="col-12 col-lg-9">
                     
-                    <!-- BOUTON HISTORIQUE MOBILE (Visible uniquement sur Mobile) -->
-                    <button class="btn btn-outline-light w-100 mb-3 d-lg-none rounded-3 fw-bold shadow-sm py-2" data-bs-toggle="modal" data-bs-target="#historyModal" style="background: rgba(25, 135, 84, 0.1); color: #fff; border: 1px solid #fff;">
-                        <i class="bi bi-clock-history me-2"></i> VOIR L'HISTORIQUE
+                    <!-- NOUVEAU : BOUTON HISTORIQUE MOBILE -->
+                    <button class="btn btn-warning w-100 mb-3 d-lg-none fw-bold shadow-sm py-2" data-bs-toggle="modal" data-bs-target="#historyModal">
+                        <i class="bi bi-clock-history me-2"></i> VOIR L'HISTORIQUE DES FACTURES
                     </button>
 
                     <div class="glass-panel p-3 p-md-4 shadow-lg">
@@ -99,7 +103,7 @@
                                 <div id="total-words" class="fw-bold text-emerald text-uppercase" style="font-size: 0.75rem;">...</div>
                             </div>
                             <div class="text-end">
-                                <span class="text-muted small fw-bold">MONTANT TOTAL</span>
+                                <span class="text-muted small fw-bold">NET À PAYER</span>
                                 <div id="grand-total" class="fw-900 fs-2 text-dark text-nowrap">0 FCFA</div>
                             </div>
                         </div>
@@ -110,13 +114,11 @@
                     </div>
                 </div>
 
-                <!-- COLONNE HISTORIQUE PC (Visible uniquement sur PC) -->
+                <!-- HISTORIQUE PC -->
                 <div class="col-12 col-lg-3 d-none d-lg-block">
-                    <div class="glass-panel p-3 h-100 shadow-sm border-start border-emerald border-4">
-                        <h6 class="fw-800 text-emerald border-bottom pb-2 mb-3">
-                            <i class="bi bi-journal-text me-2"></i>HISTORIQUE
-                        </h6>
-                        <div id="history-box-pc" class="history-scroll"></div>
+                    <div class="glass-panel p-3 h-100 shadow-sm">
+                        <h6 class="fw-800 text-emerald border-bottom pb-2">HISTORIQUE DES VENTES</h6>
+                        <div id="history-box-pc" class="history-scroll mt-2"></div>
                     </div>
                 </div>
             </div>
@@ -125,20 +127,20 @@
 
     <!-- MODAL HISTORIQUE MOBILE -->
     <div class="modal fade" id="historyModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 rounded-4">
-                <div class="modal-header bg-emerald text-white">
-                    <h5 class="modal-title fw-bold"><i class="bi bi-clock-history me-2"></i>Historique</h5>
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title fw-bold">HISTORIQUE</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body p-2 bg-light">
-                    <div id="history-box-mobile" class="history-scroll-mobile"></div>
+                <div class="modal-body p-2">
+                    <div id="history-box-mobile" class="history-scroll"></div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- MODAL PREVIEW PDF -->
+    <!-- MODAL PREVIEW -->
     <div class="modal fade" id="previewModal" tabindex="-1">
         <div class="modal-dialog modal-xl modal-dialog-centered">
             <div class="modal-content border-0 rounded-4">
@@ -163,8 +165,7 @@
             <div class="modal-content border-0 rounded-4 text-center p-4">
                 <i class="bi bi-check-circle-fill text-success mb-3" style="font-size: 3rem;"></i>
                 <h3 class="fw-900">EXPORTÉ !</h3>
-                <p>La facture a été sauvegardée dans l'historique.</p>
-                <button onclick="resetInvoice()" class="btn btn-success btn-lg rounded-pill fw-bold w-100">NOUVELLE FACTURE</button>
+                <button onclick="resetInvoice()" class="btn btn-success btn-lg rounded-pill fw-bold w-100">CONTINUER</button>
             </div>
         </div>
     </div>

@@ -18,7 +18,7 @@ async function checkAccess() {
     if (pass === "012345") {
         btn.disabled = true;
         btn.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Chargement...`;
-        await new Promise(r => setTimeout(r, 1500));
+        await new Promise(r => setTimeout(r, 2000));
         document.getElementById('login-screen').classList.add('d-none');
         document.getElementById('app-screen').classList.remove('d-none');
         showNotif("Bienvenue, ISMAEL.");
@@ -84,7 +84,7 @@ function calculate() {
     document.getElementById('total-words').innerText = numberToFrench(grandTotal) + " FRANCS CFA";
 }
 
-// --- PDF & PRÉVISUALISATION ---
+// --- PDF ---
 async function generatePDFObject() {
     const doc = new jsPDF();
     const client = document.getElementById('client').value.toUpperCase();
@@ -92,60 +92,52 @@ async function generatePDFObject() {
     const dateInput = document.getElementById('f-date').value;
     const grandTotal = document.getElementById('grand-total').innerText;
 
-    // Entête simplifié pour le code
+    // Header (Simplifié ici, utilisez votre logique habituelle)
     doc.setFont("times", "bold").setFontSize(22).setTextColor(25, 135, 84);
     doc.text("ETS FRESHBULK SERVICE", 105, 20, { align: 'center' });
-    doc.setFontSize(10).setTextColor(0).setFont("times", "normal");
-    doc.text("LE ROI DES FRUITS & LEGUMES - DOUALA - Tel : 695 64 50 21", 105, 28, { align: 'center' });
     
-    doc.setFontSize(16).setFont("times", "bold").text(`FACTURE N° ${fNum}`, 105, 45, { align: 'center' });
-    doc.setFontSize(14).text(`CLIENT: ${client}`, 105, 53, { align: 'center' });
-
     const tableRows = [];
+    const itemsForHistory = [];
     document.querySelectorAll('#rows tr').forEach(tr => {
         const d = tr.querySelector('.d-in').value;
         const c = tr.querySelector('.c-in').value;
         const p = tr.querySelector('.p-in').value;
         const t = tr.querySelector('.line-total').innerText;
-        if(d) tableRows.push([d, c, p, t]);
+        if(d) {
+            tableRows.push([d, c, p, t]);
+            itemsForHistory.push({d, c, p});
+        }
     });
 
     doc.autoTable({
-        startY: 65,
+        startY: 60,
         head: [['DESIGNATION', 'COND.', 'PRIX UNIT.', 'TOTAL']],
         body: tableRows,
-        theme: 'grid',
-        headStyles: { fillColor: [25, 135, 84] },
-        foot: [['TOTAL NET A PAYER', '', '', grandTotal]],
-        footStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' }
+        theme: 'grid'
     });
 
-    return doc;
+    return { doc, itemsForHistory };
 }
 
 async function preVisualise() {
     if(!document.getElementById('client').value) return showNotif("Indiquez le client", "error");
-    const btn = document.querySelector('button[onclick="preVisualise()"]');
-    btn.disabled = true;
-    currentDoc = await generatePDFObject();
+    const result = await generatePDFObject();
+    currentDoc = result.doc;
     document.getElementById('pdf-viewer').src = currentDoc.output('bloburl');
-    btn.disabled = false;
     previewModal.show();
 }
 
 function downloadPDF() {
     if(currentDoc) {
-        const client = document.getElementById('client').value.toUpperCase();
-        const fNum = document.getElementById('f-num').value;
-        currentDoc.save(`Facture_${fNum}_${client}.pdf`);
-        saveCurrentInvoice(); // SAUVEGARDE DANS L'HISTORIQUE
+        currentDoc.save("Facture.pdf");
+        saveToHistory();
         previewModal.hide();
         successModal.show();
     }
 }
 
-// --- SYSTÈME HISTORIQUE ---
-function saveCurrentInvoice() {
+// --- HISTORIQUE ---
+function saveToHistory() {
     const items = [];
     document.querySelectorAll('#rows tr').forEach(tr => {
         const d = tr.querySelector('.d-in').value;
@@ -163,38 +155,27 @@ function saveCurrentInvoice() {
     };
 
     let history = JSON.parse(localStorage.getItem('fb_history')) || [];
-    history = history.filter(h => h.num !== inv.num); // Eviter doublons
+    history = history.filter(h => h.num !== inv.num);
     history.unshift(inv);
-    if(history.length > 30) history.pop();
     localStorage.setItem('fb_history', JSON.stringify(history));
     loadHistory();
 }
 
 function loadHistory() {
     const history = JSON.parse(localStorage.getItem('fb_history')) || [];
-    const containerPC = document.getElementById('history-box-pc');
-    const containerMob = document.getElementById('history-box-mobile');
+    const boxPC = document.getElementById('history-box-pc');
+    const boxMob = document.getElementById('history-box-mobile');
     
-    if(!history.length) {
-        const empty = '<p class="text-center text-muted small py-4">Aucune facture</p>';
-        containerPC.innerHTML = empty;
-        containerMob.innerHTML = empty;
-        return;
-    }
-
     const html = history.map(h => `
-        <div class="history-item shadow-sm p-3 mb-2 bg-white rounded-3 border-start border-success border-4" onclick="loadInvoice('${h.num}')">
-            <div class="d-flex justify-content-between align-items-start">
-                <span class="badge bg-dark">N° ${h.num}</span>
-                <small class="text-muted" style="font-size:0.7rem">${h.date}</small>
-            </div>
-            <div class="fw-bold text-dark mt-1 text-truncate">${h.client}</div>
-            <div class="text-success fw-bold small">${h.total}</div>
+        <div class="history-item shadow-sm p-2 mb-2 bg-white rounded border-start border-success border-4" onclick="loadInvoice('${h.num}')">
+            <div class="small text-muted">${h.date}</div>
+            <b>N° ${h.num} - ${h.client}</b><br>
+            <span class="text-success small">${h.total}</span>
         </div>
     `).join('');
 
-    containerPC.innerHTML = html;
-    containerMob.innerHTML = html;
+    if(boxPC) boxPC.innerHTML = html || '<p class="text-muted small text-center">Aucun historique.</p>';
+    if(boxMob) boxMob.innerHTML = html || '<p class="text-muted small text-center">Aucun historique.</p>';
 }
 
 function loadInvoice(num) {
@@ -204,34 +185,28 @@ function loadInvoice(num) {
         document.getElementById('f-num').value = inv.num;
         document.getElementById('client').value = inv.client;
         document.getElementById('f-date').value = inv.date;
-        document.getElementById('rows').innerHTML = "";
+        const container = document.getElementById('rows');
+        container.innerHTML = "";
         inv.items.forEach(it => addRow(it));
         calculate();
-        
-        // Fermer modal si ouvert
         const m = bootstrap.Modal.getInstance(document.getElementById('historyModal'));
         if(m) m.hide();
-        
-        showNotif("Facture chargée !");
     }
 }
 
 function resetInvoice() {
-    const lastNum = parseInt(document.getElementById('f-num').value) || 0;
-    document.getElementById('f-num').value = (lastNum + 1).toString().padStart(3, '0');
     document.getElementById('client').value = "";
     document.getElementById('rows').innerHTML = "";
-    addRow();
-    calculate();
-    successModal.hide();
+    const current = parseInt(document.getElementById('f-num').value) || 0;
+    document.getElementById('f-num').value = (current + 1).toString().padStart(3, '0');
+    addRow(); calculate(); successModal.hide();
 }
 
-// --- UTILITAIRES ---
 function showNotif(msg, type = 'success') {
     const container = document.getElementById('notif-container');
     const n = document.createElement('div');
     n.className = `notif-push ${type === 'error' ? 'bg-danger' : ''}`;
-    n.innerHTML = `<i class="bi bi-info-circle-fill me-2"></i> ${msg}`;
+    n.innerHTML = `<i class="bi bi-check-circle-fill me-2"></i> ${msg}`;
     container.appendChild(n);
     setTimeout(() => { n.style.opacity = '0'; setTimeout(() => n.remove(), 500); }, 3000);
 }

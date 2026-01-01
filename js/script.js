@@ -10,23 +10,17 @@ document.addEventListener('DOMContentLoaded', () => {
     addRow();
 });
 
-// --- ACCÈS AVEC ANIMATION DE 2 SECONDES ---
+// --- ACCÈS AVEC CHARGEMENT ---
 async function checkAccess() {
     const pass = document.getElementById('pass').value;
     const btn = document.querySelector('#login-screen .btn-god');
-    const originalText = btn.innerHTML;
-
     if (pass === "012345") {
-        // Lancer l'animation
         btn.disabled = true;
-        btn.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Chargement...`;
-
-        // Attendre 2 secondes (simulation de chargement)
-        await new Promise(resolve => setTimeout(resolve, 2000));
-
+        btn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status"></span> Chargement...`;
+        await new Promise(r => setTimeout(r, 2000));
         document.getElementById('login-screen').classList.add('d-none');
         document.getElementById('app-screen').classList.remove('d-none');
-        showNotif("Bienvenue, ISMAEL EL GRINGO");
+        showNotif("Système prêt, ISMAEL.");
     } else {
         showNotif("Code incorrect", "error");
     }
@@ -44,12 +38,12 @@ function togglePassword() {
     }
 }
 
-// --- CHARGEMENT DES IMAGES ---
+// --- CHARGEMENT IMAGES ---
 function loadImage(url) {
     return new Promise((resolve, reject) => {
         const img = new Image();
         img.onload = () => resolve(img);
-        img.onerror = () => reject(new Error("Logo introuvable"));
+        img.onerror = () => reject();
         img.src = url;
     });
 }
@@ -67,8 +61,8 @@ function cleanNum(str) {
 function showNotif(msg, type = 'success') {
     const container = document.getElementById('notif-container');
     const n = document.createElement('div');
-    n.className = `notif-push ${type === 'success' ? 'notif-success' : 'notif-error'}`;
-    n.innerHTML = `<i class="bi ${type==='success'?'bi-check-circle-fill':'bi-x-circle-fill'} me-2"></i> ${msg}`;
+    n.className = `notif-push shadow-lg ${type === 'error' ? 'bg-danger' : ''}`;
+    n.innerHTML = `<i class="bi bi-check-circle-fill me-2"></i> ${msg}`;
     container.appendChild(n);
     setTimeout(() => { n.style.opacity = '0'; setTimeout(() => n.remove(), 500); }, 3000);
 }
@@ -77,8 +71,8 @@ function addRow(data = null) {
     const tr = document.createElement('tr');
     tr.innerHTML = `
         <td><input type="text" class="form-control d-in" value="${data ? data.d : ''}" placeholder="Produit"></td>
-        <td><input type="text" class="form-control c-in" value="${data ? data.c : ''}" placeholder="Ex: 10 kg" oninput="calculate()"></td>
-        <td><input type="text" class="form-control p-in" value="${data ? data.p : ''}" placeholder="0" oninput="formatInput(this)"></td>
+        <td><input type="text" class="form-control c-in" value="${data ? data.c : ''}" placeholder="Ex: 10kg" oninput="calculate()"></td>
+        <td><input type="text" class="form-control p-in w-100" value="${data ? data.p : ''}" placeholder="0" oninput="formatInput(this)"></td>
         <td class="text-end fw-bold line-total">0</td>
         <td class="text-center"><button onclick="this.closest('tr').remove(); calculate()" class="btn btn-link text-danger p-0"><i class="bi bi-trash3-fill"></i></button></td>
     `;
@@ -87,8 +81,8 @@ function addRow(data = null) {
 }
 
 function formatInput(input) {
-    let value = input.value.replace(/\D/g, '');
-    input.value = formatNumber(value);
+    let val = input.value.replace(/\D/g, '');
+    input.value = formatNumber(val);
     calculate();
 }
 
@@ -108,7 +102,7 @@ function calculate() {
     document.getElementById('total-words').innerText = numberToFrench(grandTotal) + " FRANCS CFA";
 }
 
-// --- GÉNÉRATION DU PDF (SANS FILIGRANE ET PLUS PROPRE) ---
+// --- GÉNÉRATION PDF ---
 async function generatePDFObject() {
     const doc = new jsPDF();
     const client = document.getElementById('client').value.toUpperCase();
@@ -118,7 +112,7 @@ async function generatePDFObject() {
     
     doc.setFont("times", "normal");
 
-    // 1. Logos automatiques (Attente obligatoire pour la fluidité)
+    // Logos
     try {
         const [img1, img2] = await Promise.all([
             loadImage('assets/logo1.png'),
@@ -126,11 +120,8 @@ async function generatePDFObject() {
         ]);
         doc.addImage(img1, 'PNG', 12, 10, 35, 30);
         doc.addImage(img2, 'PNG', 163, 10, 35, 30);
-    } catch (e) {
-        console.warn("Certains logos n'ont pas pu être chargés.");
-    }
+    } catch (e) {}
 
-    // 2. En-tête (Identique à l'image)
     doc.setTextColor(25, 135, 84).setFontSize(28).setFont("times", "bold");
     doc.text("ETS FRESHBULK SERVICE", 105, 22, { align: 'center' });
     doc.setTextColor(0).setFontSize(10).setFont("times", "normal");
@@ -138,51 +129,42 @@ async function generatePDFObject() {
     doc.text("NIU : P119718171347Q | BP : DOUALA | Tel : 695 64 50 21", 105, 36, { align: 'center' });
     doc.setLineWidth(0.5).line(15, 42, 195, 42);
 
-    // 3. Titre et Date
     doc.setFontSize(18).setFont("times", "bold").text(`Facture N° ${fNum} : ${client}`, 105, 55, { align: 'center' });
     const dateStr = new Date(dateInput).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     const fullDate = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
     doc.setFontSize(12).text(fullDate, 105, 63, { align: 'center' });
-    const textW = doc.getTextWidth(fullDate);
-    doc.line(105 - (textW/2), 64, 105 + (textW/2), 64);
+    doc.line(105 - (doc.getTextWidth(fullDate)/2), 64, 105 + (doc.getTextWidth(fullDate)/2), 64);
 
-    // 4. Tableau "Limpide" (Espaces optimisés)
-    const rows = [];
-    const itemsHistory = [];
+    const tableRows = [];
+    const itemsHist = [];
     document.querySelectorAll('#rows tr').forEach(tr => {
         const d = tr.querySelector('.d-in').value;
         const c = tr.querySelector('.c-in').value;
         const p = tr.querySelector('.p-in').value;
         const t = tr.querySelector('.line-total').innerText;
         if(d) {
-            rows.push([d, c, p, t]);
-            itemsHistory.push({d, c, p});
+            tableRows.push([d, c, p, t]);
+            itemsHist.push({d, c, p});
         }
     });
 
     doc.autoTable({
         startY: 70,
-        head: [['DESIGNATION', 'CONDITIONNEMENT', 'PRIX / kg', 'TOTAL (XAF)']],
-        body: rows,
+        head: [['DESIGNATION', 'COND.', 'PRIX / COND.', 'TOTAL (XAF)']],
+        body: tableRows,
         theme: 'grid',
         styles: { font: "times", textColor: [0, 0, 0], lineColor: [0, 0, 0], lineWidth: 0.1, halign: 'center', fontSize: 11, cellPadding: 3 },
         headStyles: { fillColor: [255, 255, 255], fontStyle: 'bold' },
         columnStyles: { 0: { halign: 'left', cellWidth: 55 }, 3: { fontStyle: 'bold' } },
-        foot: [[
-            { content: 'TOTAL NET À PAYER', styles: { fontStyle: 'bold', halign: 'center' } },
-            { content: '', colSpan: 2 },
-            { content: grandTotal, styles: { fontStyle: 'bold', halign: 'center', fontSize: 12 } }
-        ]],
+        foot: [[{ content: 'TOTAL NET À PAYER', styles: { fontStyle: 'bold', halign: 'center' } }, { content: '', colSpan: 2 }, { content: grandTotal, styles: { fontStyle: 'bold', halign: 'center', fontSize: 12 } }]],
         footStyles: { fillColor: [242, 242, 247], textColor: [0, 0, 0] },
         margin: { left: 20, right: 20 }
     });
 
-    // 5. Bas de page resserré
     let y = doc.lastAutoTable.finalY + 10;
     const label = "Arrêté la présente facture à la somme de : ";
-    const words = document.getElementById('total-words').innerText;
-    doc.setFontSize(10).setFont("times", "normal").text(label, 20, y);
-    doc.setFont("times", "bold").text(words, 20 + doc.getTextWidth(label), y);
+    doc.setFontSize(10).text(label, 20, y);
+    doc.setFont("times", "bold").text(document.getElementById('total-words').innerText, 20 + doc.getTextWidth(label), y);
     
     y += 18;
     doc.setFontSize(11).setFont("times", "normal").text("LIVRÉ PAR :", 20, y);
@@ -190,54 +172,47 @@ async function generatePDFObject() {
     doc.setFontSize(10).text("Signature :", 20, y + 8);
     doc.text("Cachet & Signature :", 135, y + 8);
 
-    return { doc, itemsHistory };
+    return { doc, itemsHist };
 }
 
-// ACTION : PRÉVISUALISER AVEC CHARGEMENT LOGO
 async function preVisualise() {
     if(!document.getElementById('client').value) return showNotif("Indiquez le client", "error");
-    
     const btn = document.querySelector('button[onclick="preVisualise()"]');
-    const originalText = btn.innerHTML;
-
+    const original = btn.innerHTML;
     btn.disabled = true;
-    btn.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Veuillez patienter svp...`;
-
+    btn.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Chargement...`;
+    
     try {
         const result = await generatePDFObject();
         currentDoc = result.doc;
         document.getElementById('pdf-viewer').src = currentDoc.output('bloburl');
         previewModal.show();
     } catch (e) {
-        showNotif("Erreur lors du chargement des logos", "error");
+        showNotif("Erreur logos", "error");
     } finally {
         btn.disabled = false;
-        btn.innerHTML = originalText;
+        btn.innerHTML = original;
     }
 }
 
-async function downloadPDF() {
+function downloadPDF() {
     if(currentDoc) {
-        const client = document.getElementById('client').value;
         const fNum = document.getElementById('f-num').value;
-        const result = await generatePDFObject(); 
-        
-        saveHistory({ 
-            num: fNum, 
-            client, 
-            total: document.getElementById('grand-total').innerText, 
-            date: document.getElementById('f-date').value, 
-            items: result.itemsHistory, 
-            time: new Date().toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) 
+        const client = document.getElementById('client').value;
+        // Re-générer les données pour l'historique car generatePDFObject est async
+        const items = [];
+        document.querySelectorAll('#rows tr').forEach(tr => {
+            const d = tr.querySelector('.d-in').value;
+            if(d) items.push({d, c: tr.querySelector('.c-in').value, p: tr.querySelector('.p-in').value});
         });
-
+        saveHistory({ num: fNum, client, total: document.getElementById('grand-total').innerText, date: document.getElementById('f-date').value, items, time: new Date().toLocaleTimeString('fr-FR') });
         currentDoc.save(`Facture_${fNum}_${client}.pdf`);
         previewModal.hide();
         successModal.show();
     }
 }
 
-// --- HISTORIQUE & CONVERSION (INCHANGÉ) ---
+// --- HISTORIQUE & CONVERSION ---
 function saveHistory(inv) {
     let history = JSON.parse(localStorage.getItem('fb_pro_v3_history')) || [];
     history = history.filter(h => h.num !== inv.num);

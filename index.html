@@ -18,16 +18,13 @@
     <!-- CONNEXION -->
     <section id="login-screen" class="d-flex align-items-center justify-content-center vh-100 p-3">
         <div class="login-box shadow-lg w-100" style="max-width: 400px;">
-            <!-- Logo mis à jour -->
             <img src="assets/logo.png" alt="Logo" class="login-logo mb-3" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1261/1261163.png'">
             <h1 class="fw-900 text-emerald mb-0 fs-2">FRESHBULK</h1>
             <p class="text-dark fw-bold ls-3 mb-4 small">PREMIUM SYSTEM</p>
-            
             <div class="text-start mb-3">
                 <label class="label-pro text-dark">PROPRIÉTAIRE</label>
                 <input type="text" class="form-control login-input bg-light" value="ISMAEL EL GRINGO" readonly>
             </div>
-
             <div class="text-start mb-4">
                 <label class="label-pro text-dark">CODE D'ACCÈS PRO</label>
                 <div class="input-group group-pass">
@@ -57,7 +54,6 @@
         <div class="container-fluid p-2 p-md-4">
             <div class="row g-4">
                 <div class="col-12 col-lg-9">
-                    <!-- PANNEAU DE SAISIE -->
                     <div class="glass-panel p-3 p-md-4 shadow-lg">
                         <div class="row g-2 mb-4">
                             <div class="col-6 col-md-3">
@@ -65,12 +61,12 @@
                                 <input type="text" id="f-num" class="form-control pro-input-soft fw-bold text-center" value="001">
                             </div>
                             <div class="col-6 col-md-3">
-                                <label class="label-pro">DATE DE VENTE</label>
+                                <label class="label-pro">DATE</label>
                                 <input type="date" id="f-date" class="form-control pro-input-soft">
                             </div>
                             <div class="col-12 col-md-6">
-                                <label class="label-pro">DESTINATAIRE (CLIENT)</label>
-                                <input type="text" id="client" class="form-control pro-input-soft fw-bold uppercase" placeholder="NOM DU CLIENT">
+                                <label class="label-pro">NOM DU CLIENT</label>
+                                <input type="text" id="client" class="form-control pro-input-soft fw-bold uppercase" placeholder="DESTINATAIRE">
                             </div>
                         </div>
 
@@ -78,11 +74,11 @@
                             <table class="table align-middle mb-0">
                                 <thead class="table-dark">
                                     <tr>
-                                        <th style="width: 40%;">DÉSIGNATION</th>
-                                        <th>CONDITIONNEMENT</th>
-                                        <th>PRIX / kg</th>
-                                        <th class="text-end">TOTAL (XAF)</th>
-                                        <th style="width: 50px;"></th>
+                                        <th class="col-desig">DÉSIGNATION</th>
+                                        <th class="col-cond">COND.</th>
+                                        <th class="col-prix">PRIX / COND.</th>
+                                        <th class="text-end">TOTAL</th>
+                                        <th style="width: 40px;"></th>
                                     </tr>
                                 </thead>
                                 <tbody id="rows" class="bg-white"></tbody>
@@ -90,29 +86,29 @@
                         </div>
                         
                         <button onclick="addRow()" class="btn-add-dashed w-100 mb-4 py-2">
-                            <i class="bi bi-plus-circle-fill me-2"></i> AJOUTER UN ARTICLE
+                            <i class="bi bi-plus-circle-fill me-2"></i> AJOUTER UN PRODUIT
                         </button>
 
-                        <div class="banner-total d-flex justify-content-between align-items-center p-4 rounded-4">
-                            <div>
-                                <span class="text-muted small fw-bold">MONTANT ARRÊTÉ À :</span>
-                                <div id="total-words" class="fw-bold text-emerald text-uppercase" style="font-size: 0.85rem;">...</div>
+                        <div class="banner-total d-flex justify-content-between align-items-center p-3 rounded-4">
+                            <div class="flex-grow-1 me-3">
+                                <span class="text-muted small fw-bold">ARRÊTÉ À :</span>
+                                <div id="total-words" class="fw-bold text-emerald text-uppercase" style="font-size: 0.75rem; line-height: 1.2;">...</div>
                             </div>
                             <div class="text-end">
-                                <span class="text-muted small fw-bold">NET À PAYER</span>
-                                <div id="grand-total" class="fw-900 fs-1 text-dark">0 FCFA</div>
+                                <span class="text-muted small fw-bold">TOTAL NET</span>
+                                <div id="grand-total" class="fw-900 fs-2 text-dark">0 FCFA</div>
                             </div>
                         </div>
 
                         <button onclick="preVisualise()" class="btn-god mt-4 py-3 shadow-lg fs-5">
-                            <i class="bi bi-eye-fill me-2"></i> PRÉVISUALISER LA FACTURE
+                            <i class="bi bi-eye-fill me-2"></i> PRÉVISUALISER
                         </button>
                     </div>
                 </div>
 
                 <div class="col-12 col-lg-3">
                     <div class="glass-panel p-3 h-100 shadow-sm">
-                        <h6 class="fw-800 text-emerald border-bottom pb-2">RÉCENTES</h6>
+                        <h6 class="fw-800 text-emerald border-bottom pb-2">HISTORIQUE</h6>
                         <div id="history-box" class="history-scroll mt-2"></div>
                     </div>
                 </div>
@@ -120,22 +116,20 @@
         </div>
     </main>
 
-    <!-- MODAL PREVIEW PDF (PLEIN ÉCRAN) -->
+    <!-- MODAL PREVIEW -->
     <div class="modal fade" id="previewModal" tabindex="-1" data-bs-backdrop="static">
         <div class="modal-dialog modal-xl modal-dialog-centered">
             <div class="modal-content border-0 rounded-4 shadow-2xl">
                 <div class="modal-header bg-dark text-white border-0">
-                    <h5 class="modal-title fw-bold"><i class="bi bi-file-earmark-pdf me-2"></i>VÉRIFICATION AVANT GÉNÉRATION</h5>
+                    <h5 class="modal-title fw-bold">VÉRIFICATION FACTURE</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body p-0 bg-secondary" style="height: 80vh;">
                     <iframe id="pdf-viewer" width="100%" height="100%" frameborder="0"></iframe>
                 </div>
-                <div class="modal-footer bg-white border-0 shadow-lg">
+                <div class="modal-footer bg-white border-0">
                     <button class="btn btn-outline-secondary px-4 rounded-pill fw-bold" data-bs-dismiss="modal">MODIFIER</button>
-                    <button onclick="downloadPDF()" class="btn btn-success px-5 fw-bold rounded-pill shadow-sm">
-                        CONFIRMER ET TÉLÉCHARGER <i class="bi bi-download ms-2"></i>
-                    </button>
+                    <button onclick="downloadPDF()" class="btn btn-success px-5 fw-bold rounded-pill shadow-sm">TÉLÉCHARGER</button>
                 </div>
             </div>
         </div>
@@ -144,15 +138,11 @@
     <!-- MODAL SUCCÈS -->
     <div class="modal fade" id="successModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 rounded-4 text-center p-5 shadow-2xl">
-                <div class="mb-3">
-                    <i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i>
-                </div>
-                <h2 class="fw-900 text-dark">TERMINÉ !</h2>
-                <p class="text-muted mb-4">La facture a été enregistrée avec succès.</p>
-                <div class="d-grid">
-                    <button onclick="resetInvoice()" class="btn btn-success btn-lg rounded-pill fw-bold py-3">ÉDITER UNE AUTRE FACTURE</button>
-                </div>
+            <div class="modal-content border-0 rounded-4 text-center p-4">
+                <i class="bi bi-check-circle-fill text-success mb-3" style="font-size: 3rem;"></i>
+                <h3 class="fw-900">SUCCÈS !</h3>
+                <p class="text-muted">Facture enregistrée.</p>
+                <button onclick="resetInvoice()" class="btn btn-success btn-lg rounded-pill fw-bold w-100">CONTINUER</button>
             </div>
         </div>
     </div>

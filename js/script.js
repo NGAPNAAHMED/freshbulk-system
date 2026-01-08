@@ -48,7 +48,7 @@ function loadImage(url) {
     });
 }
 
-// --- LOGIQUE ---
+// --- LOGIQUE DE CALCUL ---
 function formatNumber(num) {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 }
@@ -103,22 +103,25 @@ function calculate() {
     document.getElementById('total-words').innerText = numberToFrench(grandTotal) + " FRANCS CFA";
 }
 
-// --- PDF ORIGINAL RESTAURÉ ---
+// --- GÉNÉRATION DU PDF ---
 async function generatePDFObject() {
     const doc = new jsPDF();
     const client = document.getElementById('client').value.toUpperCase();
     const fNum = document.getElementById('f-num').value;
     const dateInput = document.getElementById('f-date').value;
     const grandTotal = document.getElementById('grand-total').innerText;
+    const totalWords = document.getElementById('total-words').innerText;
     
     doc.setFont("times", "normal");
 
+    // Logos
     try {
         const [img1, img2] = await Promise.all([loadImage('assets/logo1.png'), loadImage('assets/logo2.png')]);
         if(img1) doc.addImage(img1, 'PNG', 12, 10, 35, 30);
         if(img2) doc.addImage(img2, 'PNG', 163, 10, 35, 30);
     } catch (e) {}
 
+    // En-tête
     doc.setTextColor(25, 135, 84).setFontSize(28).setFont("times", "bold");
     doc.text("ETS FRESHBULK SERVICE", 105, 22, { align: 'center' });
     doc.setTextColor(0).setFontSize(10).setFont("times", "normal").text("COMMERCE GENERAL - LE ROI DES FRUITS & LEGUMES", 105, 30, { align: 'center' });
@@ -126,10 +129,14 @@ async function generatePDFObject() {
     doc.setLineWidth(0.5).line(15, 42, 195, 42);
 
     doc.setFontSize(18).setFont("times", "bold").text(`Facture N° ${fNum} : ${client}`, 105, 55, { align: 'center' });
-    const dateStr = new Date(dateInput).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    
+    // Date (Correction Bug Invalid Date)
+    const dateObj = dateInput ? new Date(dateInput) : new Date();
+    const dateStr = dateObj.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     const fullDate = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
-    doc.setFontSize(12).text(fullDate, 105, 63, { align: 'center' });
-    doc.line(105 - (doc.getTextWidth(fullDate)/2), 64, 105 + (doc.getTextWidth(fullDate)/2), 64);
+    doc.setFontSize(12).setFont("times", "bold").text(fullDate, 105, 63, { align: 'center' });
+    const dateWidth = doc.getTextWidth(fullDate);
+    doc.setLineWidth(0.3).line(105 - (dateWidth/2), 64, 105 + (dateWidth/2), 64);
 
     const tableRows = [];
     document.querySelectorAll('#rows tr').forEach(tr => {
@@ -140,6 +147,7 @@ async function generatePDFObject() {
         if(d) tableRows.push([d, c, p, t]);
     });
 
+    // Tableau
     doc.autoTable({
         startY: 72,
         head: [['DESIGNATION', 'COND.', 'PRIX / COND.', 'TOTAL (XAF)']],
@@ -153,25 +161,70 @@ async function generatePDFObject() {
         margin: { left: 20, right: 20 }
     });
 
-    let y = doc.lastAutoTable.finalY + 12;
-    const label = "Arrêté la présente facture à la somme de : ";
-    doc.setFontSize(10).text(label, 20, y);
-    doc.setFont("times", "bold").text(document.getElementById('total-words').innerText, 20 + doc.getTextWidth(label), y);
+    let finalY = doc.lastAutoTable.finalY + 12;
+
+    // Montant en lettres
+    doc.setFontSize(11).setFont("times", "bold");
+    const labelTexte = "Arrêté la présente facture à la somme de : " + totalWords;
+    const splitText = doc.splitTextToSize(labelTexte, 170);
+    if (finalY + (splitText.length * 7) > 280) { doc.addPage(); finalY = 20; }
+    doc.text(splitText, 20, finalY);
+    finalY += (splitText.length * 7) + 10;
+
+    // Signatures
+    if (finalY + 30 > 280) { doc.addPage(); finalY = 20; }
+    doc.setFontSize(11).setFont("times", "bold");
+    doc.text("LIVRÉ PAR : NTANKA ISMAEL", 20, finalY);
+    doc.text("RÉCEPTIONNÉ PAR :", 135, finalY);
+    finalY += 8;
+    doc.setFontSize(10).setFont("times", "normal").text("Signature :", 20, finalY);
+    doc.text("Cachet & Signature :", 135, finalY);
+
+    // --- APPLICATION DU FILIGRANE AVEC CENTRAGE ABSOLU ---
+    const pageCount = doc.internal.getNumberOfPages();
+    const watermarkText = "COMMERCE GENERAL - LE ROI DES FRUITS & LEGUMES";
     
-    y += 20;
-    doc.setFont("times", "normal").text("LIVRÉ PAR :", 20, y);
-    doc.text("RÉCEPTIONNÉ PAR :", 135, y);
-    doc.setFontSize(10).text("Signature :", 20, y + 8);
-    doc.text("Cachet & Signature :", 135, y + 8);
+    // Récupération des dimensions de la page pour le calcul du centre
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+
+    for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.saveGraphicsState();
+        
+        // Transparence légère (0.1 = 10% d'opacité)
+        const gState = new doc.GState({ opacity: 0.1 });
+        doc.setGState(gState);
+        
+        doc.setTextColor(100, 100, 100); 
+        doc.setFontSize(30); // Légèrement réduit pour être sûr qu'il tienne bien en diagonale
+        doc.setFont("times", "bold");
+        
+        /**
+         * EXPLICATION DU CENTRAGE :
+         * pageWidth / 2  : Milieu horizontal
+         * pageHeight / 2 : Milieu vertical
+         * align: 'center' : Centre le texte sur son axe X
+         * baseline: 'middle' : Centre le texte sur son axe Y (TRES IMPORTANT)
+         */
+        doc.text(watermarkText, pageWidth / 2, pageHeight / 2, { 
+            align: 'center', 
+            baseline: 'middle', 
+            angle: 45
+        });
+        
+        doc.restoreGraphicsState();
+    }
 
     return doc;
 }
 
+// --- FONCTIONS SYSTÈME ---
 async function preVisualise() {
     if(!document.getElementById('client').value) return showNotif("Indiquez le client", "error");
     const btn = document.querySelector('button[onclick="preVisualise()"]');
     btn.disabled = true;
-    btn.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Traitement...`;
+    btn.innerHTML = `<span class="spinner-border spinner-border-sm"></span>...`;
     
     currentDoc = await generatePDFObject();
     document.getElementById('pdf-viewer').src = currentDoc.output('bloburl');
@@ -185,13 +238,12 @@ function downloadPDF() {
         const client = document.getElementById('client').value.toUpperCase();
         const fNum = document.getElementById('f-num').value;
         currentDoc.save(`Facture_${fNum}_${client}.pdf`);
-        saveHistory(); // SAUVEGARDE ICI
+        saveHistory();
         previewModal.hide();
         successModal.show();
     }
 }
 
-// --- HISTORIQUE NOUVELLE VERSION ---
 function saveHistory() {
     const items = [];
     document.querySelectorAll('#rows tr').forEach(tr => {
@@ -200,7 +252,6 @@ function saveHistory() {
         const p = tr.querySelector('.p-in').value;
         if(d) items.push({ d, c, p });
     });
-
     const inv = {
         num: document.getElementById('f-num').value,
         client: document.getElementById('client').value,
@@ -208,7 +259,6 @@ function saveHistory() {
         total: document.getElementById('grand-total').innerText,
         items: items
     };
-
     let history = JSON.parse(localStorage.getItem('fb_history')) || [];
     history = history.filter(h => h.num !== inv.num);
     history.unshift(inv);
@@ -218,9 +268,6 @@ function saveHistory() {
 
 function loadHistory() {
     const history = JSON.parse(localStorage.getItem('fb_history')) || [];
-    const boxPC = document.getElementById('history-box-pc');
-    const boxMob = document.getElementById('history-box-mobile');
-    
     const html = history.map(h => `
         <div class="history-item shadow-sm p-2 mb-2 bg-white rounded border-start border-success border-4" onclick="loadInvoice('${h.num}')">
             <div class="small text-muted">${h.date}</div>
@@ -228,9 +275,8 @@ function loadHistory() {
             <span class="text-success small">${h.total}</span>
         </div>
     `).join('');
-
-    if(boxPC) boxPC.innerHTML = html || '<p class="text-muted small text-center">Aucun historique.</p>';
-    if(boxMob) boxMob.innerHTML = html || '<p class="text-muted small text-center">Aucun historique.</p>';
+    document.getElementById('history-box-pc').innerHTML = html || '<p class="small text-center">Vide</p>';
+    document.getElementById('history-box-mobile').innerHTML = html || '<p class="small text-center">Vide</p>';
 }
 
 function loadInvoice(num) {
@@ -243,11 +289,9 @@ function loadInvoice(num) {
         document.getElementById('rows').innerHTML = "";
         inv.items.forEach(it => addRow(it));
         calculate();
-        // Fermer le modal sur mobile si ouvert
-        const mEl = document.getElementById('historyModal');
-        const m = bootstrap.Modal.getInstance(mEl);
+        const m = bootstrap.Modal.getInstance(document.getElementById('historyModal'));
         if(m) m.hide();
-        showNotif("Facture chargée");
+        showNotif("Chargé");
     }
 }
 
@@ -268,8 +312,18 @@ function numberToFrench(n) {
         if (num < 10) return units[num];
         if (num < 20) return teens[num - 10];
         if (num < 100) return tens[Math.floor(num / 10)] + (num % 10 !== 0 ? " " + conv(num % 10) : "");
-        if (num < 1000) return (Math.floor(num / 100) === 1 ? "" : units[Math.floor(num / 100)] + " ") + "CENT" + (num % 100 !== 0 ? " " + conv(num % 100) : "");
-        if (num < 1000000) return (Math.floor(num / 1000) === 1 ? "" : conv(Math.floor(num / 1000)) + " ") + "MILLE" + (num % 1000 !== 0 ? " " + conv(num % 1000) : "");
+        if (num < 1000) {
+            let reste = num % 100;
+            let centaine = Math.floor(num / 100);
+            let s = centaine === 1 ? "CENT" : units[centaine] + " CENT";
+            return s + (reste !== 0 ? " " + conv(reste) : "");
+        }
+        if (num < 1000000) {
+            let reste = num % 1000;
+            let mille = Math.floor(num / 1000);
+            let s = mille === 1 ? "MILLE" : conv(mille) + " MILLE";
+            return s + (reste !== 0 ? " " + conv(reste) : "");
+        }
         return num.toString();
     }
     return conv(n);

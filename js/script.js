@@ -16,34 +16,25 @@ async function checkAccess() {
     const btn = document.querySelector('#login-screen .btn-god');
     if (pass === "012345") {
         btn.disabled = true;
-        btn.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Chargement...`;
+        btn.innerHTML = `<span class="spinner-border spinner-border-sm"></span> VEUILLEZ PATIENTER`;
         await new Promise(r => setTimeout(r, 2000));
         document.getElementById('login-screen').classList.add('d-none');
         document.getElementById('app-screen').classList.remove('d-none');
-        showNotif("Bienvenue, ISMAEL.");
+        showNotif("Bienvenue, ISMAËL.");
     } else {
         showNotif("Code invalide", "error");
     }
 }
 
-function togglePassword() {
-    const passInput = document.getElementById('pass');
-    const icon = document.getElementById('toggleIcon');
-    if (passInput.type === "password") {
-        passInput.type = "text";
-        icon.classList.replace('bi-eye-slash', 'bi-eye');
-    } else {
-        passInput.type = "password";
-        icon.classList.replace('bi-eye', 'bi-eye-slash');
-    }
-}
-
-// --- IMAGES ---
+// --- CHARGEMENT DES IMAGES (CORRIGÉ POUR ÉVITER LES CRASHES) ---
 function loadImage(url) {
     return new Promise((resolve) => {
         const img = new Image();
         img.onload = () => resolve(img);
-        img.onerror = () => resolve(null);
+        img.onerror = () => {
+            console.warn("L'image n'a pas pu être chargée (CORS ou chemin invalide): " + url);
+            resolve(null); // On retourne null au lieu de faire planter
+        };
         img.src = url;
     });
 }
@@ -111,32 +102,47 @@ async function generatePDFObject() {
     const dateInput = document.getElementById('f-date').value;
     const grandTotal = document.getElementById('grand-total').innerText;
     const totalWords = document.getElementById('total-words').innerText;
-    
-    doc.setFont("times", "normal");
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
 
-    // Logos
-    try {
-        const [img1, img2] = await Promise.all([loadImage('assets/logo1.png'), loadImage('assets/logo2.png')]);
-        if(img1) doc.addImage(img1, 'PNG', 12, 10, 35, 30);
-        if(img2) doc.addImage(img2, 'PNG', 163, 10, 35, 30);
-    } catch (e) {}
+    // On tente de charger les logos
+    const [img1, img2] = await Promise.all([loadImage('assets/logo1.png'), loadImage('assets/logo2.png')]);
 
-    // En-tête
-    doc.setTextColor(25, 135, 84).setFontSize(28).setFont("times", "bold");
-    doc.text("ETS FRESHBULK SERVICE", 105, 22, { align: 'center' });
-    doc.setTextColor(0).setFontSize(10).setFont("times", "normal").text("COMMERCE GENERAL - LE ROI DES FRUITS & LEGUMES", 105, 30, { align: 'center' });
-    doc.text("NIU : P119718171347Q | BP : DOUALA | Tel : 695 64 50 21", 105, 36, { align: 'center' });
-    doc.setLineWidth(0.5).line(15, 42, 195, 42);
+    const drawHeader = () => {
+        // Filigrane centré
+        doc.saveGraphicsState();
+        const gState = new doc.GState({ opacity: 0.1 });
+        doc.setGState(gState);
+        doc.setTextColor(100, 100, 100);
+        doc.setFontSize(25);
+        doc.setFont("times", "bold");
+        doc.text("COMMERCE GENERAL - LE ROI DES FRUITS & LEGUMES", pageWidth / 2, pageHeight / 2, { 
+            align: 'center', baseline: 'middle', angle: 45 
+        });
+        doc.restoreGraphicsState();
 
+        // Logos (On vérifie s'ils existent avant de les ajouter)
+        if(img1 && img1.complete && img1.naturalWidth !== 0) {
+            try { doc.addImage(img1, 'PNG', 12, 10, 35, 30); } catch(e) {}
+        }
+        if(img2 && img2.complete && img2.naturalWidth !== 0) {
+            try { doc.addImage(img2, 'PNG', 163, 10, 35, 30); } catch(e) {}
+        }
+
+        doc.setTextColor(25, 135, 84).setFontSize(26).setFont("times", "bold");
+        doc.text("ETS FRESHBULK SERVICE", 105, 22, { align: 'center' });
+        doc.setTextColor(0).setFontSize(10).setFont("times", "normal").text("COMMERCE GENERAL - LE ROI DES FRUITS & LEGUMES", 105, 30, { align: 'center' });
+        doc.text("NIU : P119718171347Q | BP : DOUALA | Tel : 695 64 50 21", 105, 36, { align: 'center' });
+        doc.setLineWidth(0.5).line(15, 42, 195, 42);
+    };
+
+    drawHeader();
     doc.setFontSize(18).setFont("times", "bold").text(`Facture N° ${fNum} : ${client}`, 105, 55, { align: 'center' });
     
-    // Date (Correction Bug Invalid Date)
     const dateObj = dateInput ? new Date(dateInput) : new Date();
     const dateStr = dateObj.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     const fullDate = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
     doc.setFontSize(12).setFont("times", "bold").text(fullDate, 105, 63, { align: 'center' });
-    const dateWidth = doc.getTextWidth(fullDate);
-    doc.setLineWidth(0.3).line(105 - (dateWidth/2), 64, 105 + (dateWidth/2), 64);
 
     const tableRows = [];
     document.querySelectorAll('#rows tr').forEach(tr => {
@@ -147,7 +153,6 @@ async function generatePDFObject() {
         if(d) tableRows.push([d, c, p, t]);
     });
 
-    // Tableau
     doc.autoTable({
         startY: 72,
         head: [['DESIGNATION', 'COND.', 'PRIX / COND.', 'TOTAL (XAF)']],
@@ -158,81 +163,94 @@ async function generatePDFObject() {
         columnStyles: { 0: { halign: 'left', cellWidth: 55 }, 3: { fontStyle: 'bold' } },
         foot: [[{ content: 'TOTAL NET À PAYER', styles: { fontStyle: 'bold', halign: 'center' } }, { content: '', colSpan: 2 }, { content: grandTotal, styles: { fontStyle: 'bold', halign: 'center', fontSize: 12 } }]],
         footStyles: { fillColor: [242, 242, 247], textColor: [0, 0, 0] },
-        margin: { left: 20, right: 20 }
+        margin: { top: 50, left: 20, right: 20 },
+        didDrawPage: function (data) {
+            if (data.pageNumber > 1) { drawHeader(); }
+        }
     });
 
     let finalY = doc.lastAutoTable.finalY + 12;
-
-    // Montant en lettres
     doc.setFontSize(11).setFont("times", "bold");
     const labelTexte = "Arrêté la présente facture à la somme de : " + totalWords;
     const splitText = doc.splitTextToSize(labelTexte, 170);
-    if (finalY + (splitText.length * 7) > 280) { doc.addPage(); finalY = 20; }
+    if (finalY + 20 > 280) { doc.addPage(); drawHeader(); finalY = 60; }
     doc.text(splitText, 20, finalY);
     finalY += (splitText.length * 7) + 10;
 
-    // Signatures
-    if (finalY + 30 > 280) { doc.addPage(); finalY = 20; }
-    doc.setFontSize(11).setFont("times", "bold");
-    doc.text("LIVRÉ PAR : NTANKA ISMAEL", 20, finalY);
+    if (finalY + 30 > 280) { doc.addPage(); drawHeader(); finalY = 60; }
+    doc.text("LIVRÉ PAR : NTANKA ISMAËL", 20, finalY);
     doc.text("RÉCEPTIONNÉ PAR :", 135, finalY);
     finalY += 8;
     doc.setFontSize(10).setFont("times", "normal").text("Signature :", 20, finalY);
     doc.text("Cachet & Signature :", 135, finalY);
 
-    // --- APPLICATION DU FILIGRANE AVEC CENTRAGE ABSOLU ---
-    const pageCount = doc.internal.getNumberOfPages();
-    const watermarkText = "COMMERCE GENERAL - LE ROI DES FRUITS & LEGUMES";
-    
-    // Récupération des dimensions de la page pour le calcul du centre
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-
-    for (let i = 1; i <= pageCount; i++) {
-        doc.setPage(i);
-        doc.saveGraphicsState();
-        
-        // Transparence légère (0.1 = 10% d'opacité)
-        const gState = new doc.GState({ opacity: 0.1 });
-        doc.setGState(gState);
-        
-        doc.setTextColor(100, 100, 100); 
-        doc.setFontSize(30); // Légèrement réduit pour être sûr qu'il tienne bien en diagonale
-        doc.setFont("times", "bold");
-        
-        /**
-         * EXPLICATION DU CENTRAGE :
-         * pageWidth / 2  : Milieu horizontal
-         * pageHeight / 2 : Milieu vertical
-         * align: 'center' : Centre le texte sur son axe X
-         * baseline: 'middle' : Centre le texte sur son axe Y (TRES IMPORTANT)
-         */
-        doc.text(watermarkText, pageWidth / 2, pageHeight / 2, { 
-            align: 'center', 
-            baseline: 'middle', 
-            angle: 45
-        });
-        
-        doc.restoreGraphicsState();
-    }
-
     return doc;
 }
 
-// --- FONCTIONS SYSTÈME ---
+// --- SYSTÈME ---
 async function preVisualise() {
     if(!document.getElementById('client').value) return showNotif("Indiquez le client", "error");
     const btn = document.querySelector('button[onclick="preVisualise()"]');
     btn.disabled = true;
-    btn.innerHTML = `<span class="spinner-border spinner-border-sm"></span>...`;
+    const oldText = btn.innerHTML;
+    btn.innerHTML = `<span class="spinner-border spinner-border-sm"></span> VEUILLEZ PATIENTER`;
     
-    currentDoc = await generatePDFObject();
-    document.getElementById('pdf-viewer').src = currentDoc.output('bloburl');
-    btn.disabled = false;
-    btn.innerHTML = `<i class="bi bi-eye-fill me-2"></i> PRÉVISUALISER`;
-    previewModal.show();
+    try {
+        currentDoc = await generatePDFObject();
+        document.getElementById('pdf-viewer').src = currentDoc.output('bloburl');
+        previewModal.show();
+    } catch (err) {
+        console.error(err);
+        showNotif("Erreur lors de la génération", "error");
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="bi bi-eye-fill me-2"></i> PRÉVISUALISER`;
+    }
 }
 
+// --- TRADUCTION AMÉLIORÉE (CORRIGE 33 396) ---
+function numberToFrench(n) {
+    if (n === 0) return "ZÉRO";
+    const units = ['', 'UN', 'DEUX', 'TROIS', 'QUATRE', 'CINQ', 'SIX', 'SEPT', 'HUIT', 'NEUF'];
+    const tens = ['', 'DIX', 'VINGT', 'TRENTE', 'QUARANTE', 'CINQUANTE', 'SOIXANTE', 'SOIXANTE-DIX', 'QUATRE-VINGT', 'QUATRE-VINGT-DIX'];
+
+    function conv(num) {
+        if (num < 10) return units[num];
+        if (num < 20) {
+            const teens = ['DIX', 'ONZE', 'DOUZE', 'TREIZE', 'QUATORZE', 'QUINZE', 'SEIZE', 'DIX-SEPT', 'DIX-HUIT', 'DIX-NEUF'];
+            return teens[num - 10];
+        }
+        if (num < 100) {
+            let d = Math.floor(num / 10);
+            let u = num % 10;
+            if (d === 7 || d === 9) {
+                let prefix = (d === 7) ? "SOIXANTE" : "QUATRE-VINGT";
+                if (u === 0) return (d === 7) ? "SOIXANTE-DIX" : "QUATRE-VINGT-DIX";
+                if (u === 1 && d === 7) return "SOIXANTE ET ONZE";
+                return prefix + "-" + conv(u + 10);
+            }
+            if (u === 0) return tens[d];
+            if (u === 1 && d !== 8) return tens[d] + " ET UN";
+            return tens[d] + "-" + units[u];
+        }
+        if (num < 1000) {
+            let c = Math.floor(num / 100);
+            let r = num % 100;
+            let partCent = (c === 1) ? "CENT" : units[c] + " CENT";
+            return partCent + (r !== 0 ? " " + conv(r) : "");
+        }
+        if (num < 1000000) {
+            let m = Math.floor(num / 1000);
+            let r = num % 1000;
+            let partMille = (m === 1) ? "MILLE" : conv(m) + " MILLE";
+            return partMille + (r !== 0 ? " " + conv(r) : "");
+        }
+        return num.toString();
+    }
+    return conv(n).toUpperCase();
+}
+
+// (Le reste de vos fonctions comme saveHistory, downloadPDF, etc. restent identiques)
 function downloadPDF() {
     if(currentDoc) {
         const client = document.getElementById('client').value.toUpperCase();
@@ -243,13 +261,12 @@ function downloadPDF() {
         successModal.show();
     }
 }
-
 function saveHistory() {
     const items = [];
-    document.querySelectorAll('#rows tr').forEach(tr => {
-        const d = tr.querySelector('.d-in').value;
-        const c = tr.querySelector('.c-in').value;
-        const p = tr.querySelector('.p-in').value;
+    document.querySelectorAll('#rows tr').forEach(row => {
+        const d = row.querySelector('.d-in').value;
+        const c = row.querySelector('.c-in').value;
+        const p = row.querySelector('.p-in').value;
         if(d) items.push({ d, c, p });
     });
     const inv = {
@@ -265,7 +282,6 @@ function saveHistory() {
     localStorage.setItem('fb_history', JSON.stringify(history));
     loadHistory();
 }
-
 function loadHistory() {
     const history = JSON.parse(localStorage.getItem('fb_history')) || [];
     const html = history.map(h => `
@@ -275,10 +291,11 @@ function loadHistory() {
             <span class="text-success small">${h.total}</span>
         </div>
     `).join('');
-    document.getElementById('history-box-pc').innerHTML = html || '<p class="small text-center">Vide</p>';
-    document.getElementById('history-box-mobile').innerHTML = html || '<p class="small text-center">Vide</p>';
+    const hPc = document.getElementById('history-box-pc');
+    const hMob = document.getElementById('history-box-mobile');
+    if(hPc) hPc.innerHTML = html || '<p class="small text-center">Vide</p>';
+    if(hMob) hMob.innerHTML = html || '<p class="small text-center">Vide</p>';
 }
-
 function loadInvoice(num) {
     const history = JSON.parse(localStorage.getItem('fb_history')) || [];
     const inv = history.find(h => h.num === num);
@@ -294,37 +311,10 @@ function loadInvoice(num) {
         showNotif("Chargé");
     }
 }
-
 function resetInvoice() {
     document.getElementById('client').value = "";
     document.getElementById('rows').innerHTML = "";
     const current = parseInt(document.getElementById('f-num').value) || 0;
     document.getElementById('f-num').value = (current + 1).toString().padStart(3, '0');
     addRow(); calculate(); successModal.hide();
-}
-
-function numberToFrench(n) {
-    if (n === 0) return "ZÉRO";
-    const units = ['', 'UN', 'DEUX', 'TROIS', 'QUATRE', 'CINQ', 'SIX', 'SEPT', 'HUIT', 'NEUF'];
-    const tens = ['', '', 'VINGT', 'TRENTE', 'QUARANTE', 'CINQUANTE', 'SOIXANTE', 'SOIXANTE-DIX', 'QUATRE-VINGT', 'QUATRE-VINGT-DIX'];
-    const teens = ['DIX', 'ONZE', 'DOUZE', 'TREIZE', 'QUATORZE', 'QUINZE', 'SEIZE', 'DIX-SEPT', 'DIX-HUIT', 'DIX-NEUF'];
-    function conv(num) {
-        if (num < 10) return units[num];
-        if (num < 20) return teens[num - 10];
-        if (num < 100) return tens[Math.floor(num / 10)] + (num % 10 !== 0 ? " " + conv(num % 10) : "");
-        if (num < 1000) {
-            let reste = num % 100;
-            let centaine = Math.floor(num / 100);
-            let s = centaine === 1 ? "CENT" : units[centaine] + " CENT";
-            return s + (reste !== 0 ? " " + conv(reste) : "");
-        }
-        if (num < 1000000) {
-            let reste = num % 1000;
-            let mille = Math.floor(num / 1000);
-            let s = mille === 1 ? "MILLE" : conv(mille) + " MILLE";
-            return s + (reste !== 0 ? " " + conv(reste) : "");
-        }
-        return num.toString();
-    }
-    return conv(n);
 }

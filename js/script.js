@@ -99,101 +99,179 @@ async function generatePDFObject() {
     const dateInput = document.getElementById('f-date').value;
     const grandTotal = document.getElementById('grand-total').innerText;
     const totalWords = document.getElementById('total-words').innerText;
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
+    const pageWidth  = doc.internal.pageSize.getWidth();   // 210 mm
+    const pageHeight = doc.internal.pageSize.getHeight();  // 297 mm
 
-    // On pré-charge les logos (si erreur CORS, ils seront null et n'arrêteront pas le script)
-    const [img1, img2] = await Promise.all([loadImage('assets/logo1.png'), loadImage('assets/logo2.png')]);
+    // ═══════════════════════════════════════════════════════════════
+    // DIMENSIONS CALCULÉES D'APRÈS LES IMAGES RÉELLES
+    // Header : 1024×343px → à 210mm de large → hauteur = 70.3 mm
+    // Footer : 1024×131px → à 210mm de large → hauteur = 26.9 mm
+    // Zone contenu : de 72mm à 268mm (strictement entre header et footer)
+    // ═══════════════════════════════════════════════════════════════
+    const HEADER_H    = 70.3;                     // hauteur du bandeau header en mm
+    const FOOTER_H    = 26.9;                     // hauteur du bandeau footer en mm
+    const FOOTER_Y    = pageHeight - FOOTER_H;    // position Y du footer = 270.1 mm
+    const CONTENT_TOP = HEADER_H + 4;             // 1ère ligne de contenu = 74.3 mm
+    const CONTENT_BOT = FOOTER_Y - 4;             // dernière ligne de contenu = 266.1 mm
 
-    const drawHeaderAndWatermark = () => {
-        // 1. Filigrane centré
-        doc.saveGraphicsState();
-        const gState = new doc.GState({ opacity: 0.1 });
-        doc.setGState(gState);
-        doc.setTextColor(100, 100, 100);
-        doc.setFontSize(25);
-        doc.setFont("times", "bold");
-        doc.text("COMMERCE GENERAL - LE ROI DES FRUITS & LEGUMES", pageWidth / 2, pageHeight / 2, { 
-            align: 'center', baseline: 'middle', angle: 45 
-        });
-        doc.restoreGraphicsState();
+    // ── Fonction de dessin d'une page (header + footer UNIQUEMENT) ───────────
+    // Le filigrane est dessiné EN DERNIER sur toutes les pages (après le tableau)
+    const drawPage = () => {
 
-        // 2. Logos (Protection contre les erreurs de chargement)
-        if(img1) { try { doc.addImage(img1, 'PNG', 12, 10, 35, 30); } catch(e){} }
-        if(img2) { try { doc.addImage(img2, 'PNG', 163, 10, 35, 30); } catch(e){} }
+        // HEADER — pleine opacité
+        try {
+            if (typeof HEADER_BAND_B64 !== 'undefined') {
+                doc.addImage(HEADER_BAND_B64, 'JPEG', 0, 0, 210, HEADER_H);
+            }
+        } catch(e) { console.error("Header error:", e); }
 
-        // 3. Textes En-tête
-        doc.setTextColor(25, 135, 84).setFontSize(26).setFont("times", "bold");
-        doc.text("ETS FRESHBULK SERVICE", 105, 22, { align: 'center' });
-        doc.setTextColor(0).setFontSize(10).setFont("times", "normal").text("COMMERCE GENERAL - LE ROI DES FRUITS & LEGUMES", 105, 30, { align: 'center' });
-        doc.text("NIU : P119718171347Q | BP : DOUALA | Tel : 695 64 50 21", 105, 36, { align: 'center' });
-        doc.setLineWidth(0.5).line(15, 42, 195, 42);
+        // FOOTER — pleine opacité
+        try {
+            if (typeof FOOTER_BAND_B64 !== 'undefined') {
+                doc.addImage(FOOTER_BAND_B64, 'PNG', 0, FOOTER_Y, 210, FOOTER_H);
+            }
+        } catch(e) { console.error("Footer error:", e); }
     };
 
-    // --- Page 1 ---
-    drawHeaderAndWatermark();
-    
-    // Titre de la facture
-    doc.setFontSize(18).setFont("times", "bold").text(`Facture N° ${fNum} : ${client}`, 105, 55, { align: 'center' });
-    
-    // Date (TOUJOURS SOULIGNÉE)
-    const dateObj = dateInput ? new Date(dateInput) : new Date();
-    const dateStr = dateObj.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-    const fullDate = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
-    
-    doc.setFontSize(12).setFont("times", "bold").text(fullDate, 105, 63, { align: 'center' });
-    const dateWidth = doc.getTextWidth(fullDate);
-    doc.setLineWidth(0.3).line(105 - (dateWidth/2), 64, 105 + (dateWidth/2), 64); // Ligne de soulignement
+    // ── Page 1 ───────────────────────────────────────────────────────────────
+    drawPage();
 
+    // Titre de la facture
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(16).setFont("times", "bold");
+    doc.text(`Facture N° ${fNum} : ${client}`, pageWidth / 2, CONTENT_TOP + 4, { align: 'center' });
+
+    // Date soulignée
+    const dateObj = dateInput ? new Date(dateInput) : new Date();
+    const dateStr  = dateObj.toLocaleDateString('fr-FR', {
+        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+    });
+    const fullDate = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
+    doc.setFontSize(12).setFont("times", "bold");
+    doc.text(fullDate, pageWidth / 2, CONTENT_TOP + 12, { align: 'center' });
+    const dw = doc.getTextWidth(fullDate);
+    doc.setLineWidth(0.3).line(
+        pageWidth/2 - dw/2, CONTENT_TOP + 13.5,
+        pageWidth/2 + dw/2, CONTENT_TOP + 13.5
+    );
+
+    // ── Lignes du tableau ────────────────────────────────────────────────────
     const tableRows = [];
+    let rowNum = 1;
     document.querySelectorAll('#rows tr').forEach(tr => {
         const d = tr.querySelector('.d-in').value;
         const c = tr.querySelector('.c-in').value;
         const p = tr.querySelector('.p-in').value;
         const t = tr.querySelector('.line-total').innerText;
-        if(d) tableRows.push([d, c, p, t]);
+        if (d) tableRows.push([rowNum++, d, c, p, t]);
     });
 
-    // Tableau avec répétition d'en-tête sur les pages suivantes
+    // TOTAL en DERNIÈRE LIGNE du body — colonne N° vide, "TOTAL NET À PAYER" sur 4 col
+    const LG = [193, 235, 193]; // vert clair
+    tableRows.push([
+        { content: 'TOTAL NET À PAYER', colSpan: 4,
+          styles: { fontStyle: 'bold', halign: 'center', fillColor: LG, textColor: [0, 0, 0] } },
+        { content: grandTotal,
+          styles: { fontStyle: 'bold', halign: 'center', fontSize: 11, fillColor: LG, textColor: [0, 0, 0] } }
+    ]);
+
+    // Tableau sans foot — 5 colonnes : N° | DESIGNATION | COND. | PRIX/COND. | TOTAL
     doc.autoTable({
-        startY: 72,
-        head: [['DESIGNATION', 'COND.', 'PRIX / COND.', 'TOTAL (XAF)']],
+        startY: CONTENT_TOP + 20,
+        head: [['N°', 'DESIGNATION', 'COND.', 'PRIX / COND.', 'TOTAL (XAF)']],
         body: tableRows,
         theme: 'grid',
-        styles: { font: "times", textColor: [0, 0, 0], lineColor: [0, 0, 0], lineWidth: 0.1, halign: 'center', fontSize: 11, cellPadding: 3 },
+        styles: {
+            font: "times", textColor: [0, 0, 0],
+            lineColor: [0, 0, 0], lineWidth: 0.15,
+            halign: 'center', fontSize: 11,
+            // Padding vertical réduit pour tenir 14 lignes sur page 1
+            cellPadding: { top: 1.5, bottom: 1.5, left: 2, right: 2 }
+        },
         headStyles: { fillColor: [255, 255, 255], fontStyle: 'bold' },
-        columnStyles: { 0: { halign: 'left', cellWidth: 55 }, 3: { fontStyle: 'bold' } },
-        foot: [[{ content: 'TOTAL NET À PAYER', styles: { fontStyle: 'bold', halign: 'center' } }, { content: '', colSpan: 2 }, { content: grandTotal, styles: { fontStyle: 'bold', halign: 'center', fontSize: 12 } }]],
-        footStyles: { fillColor: [242, 242, 247], textColor: [0, 0, 0] },
-        margin: { top: 50, left: 20, right: 20 },
+        columnStyles: {
+            0: { cellWidth: 10, halign: 'center' },   // N°
+            1: { halign: 'left',  cellWidth: 55 },     // DESIGNATION
+            4: { fontStyle: 'bold' }                   // TOTAL
+        },
+        margin: {
+            top: CONTENT_TOP + 2,
+            left: 18,
+            right: 18,
+            bottom: FOOTER_H + 4
+        },
         didDrawPage: function (data) {
             if (data.pageNumber > 1) {
-                drawHeaderAndWatermark();
+                drawPage();
             }
         }
     });
 
-    let finalY = doc.lastAutoTable.finalY + 12;
+    // Nombre de lignes de données (sans compter la ligne TOTAL)
+    const dataRowCount = tableRows.length - 1;
 
-    // --- MONTANT EN LETTRES (TOUJOURS EN GRAS) ---
-    doc.setFontSize(11).setFont("times", "bold"); // Application du GRAS
+    let finalY = doc.lastAutoTable.finalY + 6; // espacement compact après tableau
+
+    // ── Règle de pagination ──────────────────────────────────────────────────
+    // ≤ 14 lignes : tout tient sur UNE SEULE page (obligatoire)
+    // > 14 lignes : la 15e ligne + "Arrêté..." + signatures → page suivante
+    if (dataRowCount > 14) {
+        doc.addPage();
+        drawPage();
+        finalY = CONTENT_TOP + 4;
+    }
+
+    // Montant en lettres — fontSize 9 pour tenir sur page 1 avec 14 lignes
+    doc.setFontSize(9).setFont("times", "bold");
     const labelTexte = "Arrêté la présente facture à la somme de : " + totalWords;
-    const splitText = doc.splitTextToSize(labelTexte, 170);
-    
-    if (finalY + 20 > 280) { doc.addPage(); drawHeaderAndWatermark(); finalY = 60; }
-    
-    doc.setFont("times", "bold"); // Double sécurité pour le gras
-    doc.text(splitText, 20, finalY);
-    finalY += (splitText.length * 7) + 10;
+    const splitText  = doc.splitTextToSize(labelTexte, 174);
+
+    if (finalY + splitText.length * 5.5 + 6 > CONTENT_BOT) {
+        doc.addPage(); drawPage(); finalY = CONTENT_TOP + 4;
+    }
+    doc.setTextColor(0, 0, 0);
+    doc.setFont("times", "bold");
+    doc.text(splitText, 18, finalY);
+    finalY += (splitText.length * 5.5) + 8;
 
     // Signatures
-    if (finalY + 30 > 280) { doc.addPage(); drawHeaderAndWatermark(); finalY = 60; }
-    doc.setFontSize(11).setFont("times", "bold");
-    doc.text("LIVRÉ PAR : NTANKA ISMAËL", 20, finalY);
-    doc.text("RÉCEPTIONNÉ PAR :", 135, finalY);
-    finalY += 8;
-    doc.setFontSize(10).setFont("times", "normal").text("Signature :", 20, finalY);
-    doc.text("Cachet & Signature :", 135, finalY);
+    if (finalY + 20 > CONTENT_BOT) {
+        doc.addPage(); drawPage(); finalY = CONTENT_TOP + 4;
+    }
+    doc.setFontSize(10).setFont("times", "bold");
+    doc.text("LIVRÉ PAR : NTANKA ISMAËL", 18, finalY);
+    doc.text("RÉCEPTIONNÉ PAR :", 130, finalY);
+    finalY += 7;
+    doc.setFontSize(9).setFont("times", "normal");
+    doc.text("Signature :", 18, finalY);
+    doc.text("Cachet & Signature :", 130, finalY);
+
+    // ══════════════════════════════════════════════════════════════════════
+    // FILIGRANE — dessiné EN DERNIER sur TOUTES les pages
+    // → apparaît au-dessus du tableau ET de tout le contenu
+    // → opacité faible : table reste parfaitement lisible
+    // ══════════════════════════════════════════════════════════════════════
+    doc.setFont("times", "bold");
+    doc.setFontSize(22);
+    const wmText = "COMMERCE GENERAL - LE ROI DES FRUITS & LEGUMES";
+    const wmW    = doc.getTextWidth(wmText);
+    const wmCX   = pageWidth / 2;
+    const wmCY   = (CONTENT_TOP + CONTENT_BOT) / 2;   // centre zone contenu ≈ 170 mm
+    const sq2    = Math.SQRT1_2;                        // cos45 = sin45 ≈ 0.7071
+    const wmX    = wmCX - (wmW / 2) * sq2;
+    const wmY    = wmCY + (wmW / 2) * sq2;
+
+    const nbPages = doc.internal.getNumberOfPages();
+    for (let pg = 1; pg <= nbPages; pg++) {
+        doc.setPage(pg);
+        doc.saveGraphicsState();
+        doc.setGState(new doc.GState({ opacity: 0.22 }));
+        doc.setTextColor(90, 90, 90);
+        doc.setFont("times", "bold");
+        doc.setFontSize(22);
+        doc.text(wmText, wmX, wmY, { angle: 45 });
+        doc.restoreGraphicsState();
+    }
 
     return doc;
 }

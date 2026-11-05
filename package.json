@@ -1,0 +1,10 @@
+{
+  "name": "freshbulk-system",
+  "version": "1.0.0",
+  "description": "Système de facturation Freshbulk",
+  "scripts": {
+    "dev": "npx serve .",
+    "start": "npx serve ."
+  }
+}
+
